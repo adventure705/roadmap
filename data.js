@@ -116,6 +116,12 @@ function loadData() {
                 if (user) {
                     const docRef = db.collection('roadmap').doc(FIXED_DOC_ID);
 
+                    // Auth is ready, if we have pending changes, push them now
+                    if (isDirty) {
+                        console.log("🚀 Auth ready. Pushing pending changes...");
+                        syncMemoryToCloud();
+                    }
+
                     docRef.onSnapshot(doc => {
                         // If we have unsaved local changes (Dirty), we prioritize Local over Cloud (Push)
                         // UNLESS this snapshot is triggered by our own write? 
@@ -123,31 +129,18 @@ function loadData() {
                         // Ideally we check timestamps, but here we assume Local Edits > Old Cloud Data on startup.
 
                         if (isDirty) {
-                            console.log("Local changes detected. Checking if Cloud push is needed.");
+                            console.log("☁️ Local changes pending. Harmonizing with Cloud...");
                             const cloudData = doc.exists ? doc.data() : null;
                             const localUpdated = roadmapData.updatedAt || 0;
                             const cloudUpdated = (cloudData && cloudData.updatedAt) ? cloudData.updatedAt : 0;
 
                             if (localUpdated > cloudUpdated) {
-                                console.log(`Pushing newer local data (${localUpdated}) to Cloud (${cloudUpdated})...`);
-                                const dataToSave = {
-                                    years: roadmapData.years,
-                                    categories: roadmapData.categories,
-                                    bankAccounts: roadmapData.bankAccounts,
-                                    cards: roadmapData.cards,
-                                    commonMemos: roadmapData.commonMemos,
-                                    categoryOperators: roadmapData.categoryOperators,
-                                    categoryColors: roadmapData.categoryColors,
-                                    businessNames: roadmapData.businessNames,
-                                    investment: roadmapData.investment,
-                                    management: roadmapData.management,
-                                    moneyPlan: roadmapData.moneyPlan,
-                                    updatedAt: localUpdated
-                                };
-                                docRef.set(dataToSave).then(() => {
-                                    console.log("✅ Local data synced to Cloud.");
-                                    isDirty = false;
-                                }).catch(e => console.error("❌ Cloud Push failed:", e));
+                                console.log("⬆️ Pushing newer local data to Cloud...");
+                                syncMemoryToCloud();
+                            } else if (cloudUpdated > localUpdated) {
+                                console.log("⬇️ Cloud has newer data. Updating Local...");
+                                mergeCloudData(cloudData);
+                                isDirty = false;
                             }
                         } else {
                             if (doc.exists) {
@@ -155,26 +148,13 @@ function loadData() {
                                 const cloudUpdated = cloudData.updatedAt || 0;
                                 const localUpdated = roadmapData.updatedAt || 0;
 
-                                // Safety: If both are 0, check if we have any actual data in memory
-                                const hasLocalData = Object.keys(roadmapData.years).length > 1 || (roadmapData.years[2026] && roadmapData.years[2026].details.income.length > 0);
-
                                 if (cloudUpdated > localUpdated) {
-                                    console.log(`Updating memory from Cloud: Newer data found (${cloudUpdated} > ${localUpdated})`);
+                                    console.log(`✅ Cloud updated: ${new Date(cloudUpdated).toLocaleTimeString()}`);
                                     mergeCloudData(cloudData);
-                                } else if (localUpdated > cloudUpdated) {
-                                    console.log(`Local data is newer (${localUpdated} > ${cloudUpdated}). Syncing to Cloud.`);
-                                    saveData();
-                                } else {
-                                    // Both are 0 or equal (e.g. initial migration)
-                                    if (cloudUpdated === 0 && localUpdated === 0) {
-                                        if (hasLocalData) {
-                                            console.log("Both are timestamp-less. Prioritizing Local.");
-                                            saveData(); // Establish timestamp
-                                        } else {
-                                            console.log("Both are timestamp-less and local is empty. Taking Cloud.");
-                                            mergeCloudData(cloudData);
-                                        }
-                                    }
+                                } else if (localUpdated > cloudUpdated && localUpdated !== 0) {
+                                    // This case happens if a previous push failed or was interrupted
+                                    console.log("⬆️ Local is ahead of Cloud. Re-syncing...");
+                                    syncMemoryToCloud();
                                 }
                             } else {
                                 // 문서가 존재하지 않으면 초기 데이터 생성
@@ -227,48 +207,56 @@ function saveData() {
         isDirty = true;
         roadmapData.updatedAt = Date.now();
 
-        const dataToSave = {
-            years: roadmapData.years,
-            categories: roadmapData.categories,
-            bankAccounts: roadmapData.bankAccounts,
-            cards: roadmapData.cards,
-            commonMemos: roadmapData.commonMemos,
-            categoryOperators: roadmapData.categoryOperators,
-            categoryColors: roadmapData.categoryColors,
-            businessNames: roadmapData.businessNames,
-            investment: roadmapData.investment,
-            management: roadmapData.management,
-            moneyPlan: roadmapData.moneyPlan,
-            updatedAt: roadmapData.updatedAt
-        };
+        // 1. Local Save First (Instant persistence)
+        localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
 
-        // Local Save (Instant)
-        localStorage.setItem('supermoon_data', JSON.stringify(dataToSave));
-
-        // Cloud Save (Background)
-        if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
-            const auth = firebase.auth();
-            const db = firebase.firestore();
-
-            // Re-check authentication. If not signed in, Firestore might throw.
-            if (auth.currentUser) {
-                db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave)
-                    .then(() => {
-                        console.log("✅ Cloud Saved at " + new Date(roadmapData.updatedAt).toLocaleTimeString());
-                        isDirty = false;
-                    })
-                    .catch(err => {
-                        console.error("❌ Cloud Save Failed:", err);
-                        // We stay dirty so we can retry on next snapshot
-                    });
-            } else {
-                console.warn("Cloud save deferred: User not yet authenticated.");
-                // If not signed in, isDirty remains true. loadData's onSnapshot will pick it up when ready.
-            }
-        }
+        // 2. Cloud Sync
+        syncMemoryToCloud();
     } catch (e) {
         console.error("Save Error:", e);
     }
+}
+
+let isSyncing = false;
+function syncMemoryToCloud() {
+    if (typeof firebase === 'undefined' || firebase.apps.length === 0) return;
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    if (!auth.currentUser) {
+        // Deferred save: will be picked up by onAuthStateChanged
+        return;
+    }
+
+    if (isSyncing) return;
+    isSyncing = true;
+
+    const dataToSave = {
+        years: roadmapData.years,
+        categories: roadmapData.categories,
+        bankAccounts: roadmapData.bankAccounts,
+        cards: roadmapData.cards,
+        commonMemos: roadmapData.commonMemos,
+        categoryOperators: roadmapData.categoryOperators,
+        categoryColors: roadmapData.categoryColors,
+        businessNames: roadmapData.businessNames,
+        investment: roadmapData.investment,
+        management: roadmapData.management,
+        moneyPlan: roadmapData.moneyPlan,
+        updatedAt: roadmapData.updatedAt
+    };
+
+    db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave)
+        .then(() => {
+            console.log("✅ Firebase Sync Success: " + new Date(roadmapData.updatedAt).toLocaleTimeString());
+            isDirty = false;
+            isSyncing = false;
+        })
+        .catch(err => {
+            console.error("❌ Firebase Sync Fail:", err);
+            isSyncing = false;
+        });
 }
 
 // Global UI Update Trigger Helper
