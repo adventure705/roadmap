@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -154,7 +154,12 @@
                 <div id="detailContent" class="text-sm text-gray-300"></div>
             </div>
         </section>
-    </main>
+    </main>    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase_init.js"></script>
+
     <script src="data.js"></script>
     <script src="financial.js"></script>
     <script>window.addEventListener('load', () => initFinancialPage('business'));</script>

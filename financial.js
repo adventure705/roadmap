@@ -1067,12 +1067,12 @@ function renderInstallmentDetails(itemId, monthIndex) {
     // Start: info.startYear, info.startMonth
     // Current Click: currentYear, monthIndex
 
-    let html = `< div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-800 rounded-lg" >
+    let html = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-800 rounded-lg">
         <div><span class="block text-gray-500 text-xs">카드사</span><span class="font-bold text-blue-300">${item.card}</span></div>
         <div><span class="block text-gray-500 text-xs">총 할부금액</span><span class="font-bold text-white">${formatMoneyFull(info.total)}원</span></div>
         <div><span class="block text-gray-500 text-xs">할부 조건</span><span class="font-bold text-green-400">${info.type === 'free' ? '무이자' : (info.months + '개월')} (${info.type !== 'free' ? info.rate + '%' : ''})</span></div>
         <div><span class="block text-gray-500 text-xs">총 이자</span><span class="font-bold text-yellow-500">${formatMoneyFull(info.totalInterest)}원</span></div>
-    </div > `;
+    </div>`;
 
     // Specific Month Detail
     if (monthIndex !== -1) {
@@ -1085,7 +1085,7 @@ function renderInstallmentDetails(itemId, monthIndex) {
             const sched = calcInstallmentSchedule(info.total, info.months, info.rate, info.type).schedule;
             const step = sched[absMonthIndex];
 
-            html += `< h4 class="font-bold text-lg mb-2 text-white border-b border-white/10 pb-2" > ${absMonthIndex + 1}회차 납부 내역</h4 >
+            html += `<h4 class="font-bold text-lg mb-2 text-white border-b border-white/10 pb-2">${absMonthIndex + 1}회차 납부 내역</h4>
             <div class="flex justify-between items-center bg-gray-700/50 p-4 rounded-lg">
                 <div class="text-center">
                     <p class="text-xs text-gray-400">납부 원금</p>
@@ -1106,11 +1106,11 @@ function renderInstallmentDetails(itemId, monthIndex) {
                 남은 원금: ${formatMoneyFull(step.balanceAfter)}원
             </div>`;
         } else {
-            html += `< p class="text-gray-500 py-4" > 이 달은 할부 납부 기간이 아닙니다.</p > `;
+            html += `<p class="text-gray-500 py-4">이 달은 할부 납부 기간이 아닙니다.</p>`;
         }
     } else {
         // Full Schedule Summary (Simple list)
-        html += `< h4 class="font-bold text-lg mb-2 text-white border-b border-white/10 pb-2" > 전체 상환 스케줄</h4 >
+        html += `<h4 class="font-bold text-lg mb-2 text-white border-b border-white/10 pb-2">전체 상환 스케줄</h4>
             <div class="max-h-60 overflow-y-auto">
                 <table class="w-full text-xs text-left">
                     <thead class="bg-gray-700 text-gray-300 text-center sticky top-0">
