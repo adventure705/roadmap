@@ -123,62 +123,59 @@ function loadData() {
                         // Ideally we check timestamps, but here we assume Local Edits > Old Cloud Data on startup.
 
                         if (isDirty) {
-                            console.log("Local changes detected. Overwriting Cloud with Local Data.");
-                            saveData(); // Attempt to save again (which clears Dirty if successful? No, we need to clear it)
-                            // Actually saveData will write to cloud.
-                            // But we need to be careful not to loop.
-                            // Let's rely on saveData's logic, but we need to reset isDirty only on success.
-                            // For now, let's just NOT overwrite local memory from Cloud if Dirty.
+                            console.log("Local changes detected. Checking if Cloud push is needed.");
+                            const cloudData = doc.exists ? doc.data() : null;
+                            const localUpdated = roadmapData.updatedAt || 0;
+                            const cloudUpdated = (cloudData && cloudData.updatedAt) ? cloudData.updatedAt : 0;
 
-                            // Better approach:
-                            // If Dirty, IGNORE this incoming snapshot (which is likely old data), 
-                            // AND FORCE a push.
-                            console.log("Pushing local data to Cloud...");
-                            // Create data payload from current roadmapData
-                            const dataToSave = {
-                                years: roadmapData.years,
-                                categories: roadmapData.categories,
-                                bankAccounts: roadmapData.bankAccounts,
-                                cards: roadmapData.cards,
-                                commonMemos: roadmapData.commonMemos,
-                                categoryOperators: roadmapData.categoryOperators,
-                                categoryColors: roadmapData.categoryColors,
-                                businessNames: roadmapData.businessNames,
-                                investment: roadmapData.investment,
-                                management: roadmapData.management,
-                                moneyPlan: roadmapData.moneyPlan
-                            };
-                            docRef.set(dataToSave).then(() => {
-                                console.log("Local changes pushed to Cloud.");
-                                isDirty = false; // Clear dirty flag after successful push
-                            }).catch(e => console.error("Push failed:", e));
-
+                            if (localUpdated > cloudUpdated) {
+                                console.log(`Pushing newer local data (${localUpdated}) to Cloud (${cloudUpdated})...`);
+                                const dataToSave = {
+                                    years: roadmapData.years,
+                                    categories: roadmapData.categories,
+                                    bankAccounts: roadmapData.bankAccounts,
+                                    cards: roadmapData.cards,
+                                    commonMemos: roadmapData.commonMemos,
+                                    categoryOperators: roadmapData.categoryOperators,
+                                    categoryColors: roadmapData.categoryColors,
+                                    businessNames: roadmapData.businessNames,
+                                    investment: roadmapData.investment,
+                                    management: roadmapData.management,
+                                    moneyPlan: roadmapData.moneyPlan,
+                                    updatedAt: localUpdated
+                                };
+                                docRef.set(dataToSave).then(() => {
+                                    console.log("✅ Local data synced to Cloud.");
+                                    isDirty = false;
+                                }).catch(e => console.error("❌ Cloud Push failed:", e));
+                            }
                         } else {
                             if (doc.exists) {
                                 const cloudData = doc.data();
+                                const cloudUpdated = cloudData.updatedAt || 0;
+                                const localUpdated = roadmapData.updatedAt || 0;
 
-                                // Merge cloud data into roadmapData
-                                if (cloudData.years) roadmapData.years = cloudData.years;
-                                if (cloudData.categories) roadmapData.categories = cloudData.categories;
-                                if (cloudData.bankAccounts) roadmapData.bankAccounts = cloudData.bankAccounts;
-                                if (cloudData.cards) roadmapData.cards = cloudData.cards;
-                                if (cloudData.commonMemos) roadmapData.commonMemos = cloudData.commonMemos;
-                                if (cloudData.categoryOperators) roadmapData.categoryOperators = cloudData.categoryOperators;
-                                if (cloudData.categoryColors) roadmapData.categoryColors = cloudData.categoryColors;
-                                if (cloudData.businessNames) roadmapData.businessNames = cloudData.businessNames;
-                                if (cloudData.investment) roadmapData.investment = cloudData.investment;
-                                if (cloudData.management) roadmapData.management = cloudData.management;
-                                if (cloudData.moneyPlan) roadmapData.moneyPlan = cloudData.moneyPlan;
+                                // Safety: If both are 0, check if we have any actual data in memory
+                                const hasLocalData = Object.keys(roadmapData.years).length > 1 || (roadmapData.years[2026] && roadmapData.years[2026].details.income.length > 0);
 
-                                localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
-                                console.log("✅ Real-time sync: Data updated from Firestore");
-
-                                // Update UI to reflect changes from other devices
-                                if (typeof renderAllBlocks === 'function') renderAllBlocks();
-                                if (typeof updateUI === 'function') updateUI();
-                                if (typeof renderSidebar === 'function') renderSidebar(window.currentPageType);
-                                if (typeof updateSettlementUI === 'function') updateSettlementUI();
-                                if (typeof renderMoneyPlanUI === 'function') renderMoneyPlanUI();
+                                if (cloudUpdated > localUpdated) {
+                                    console.log(`Updating memory from Cloud: Newer data found (${cloudUpdated} > ${localUpdated})`);
+                                    mergeCloudData(cloudData);
+                                } else if (localUpdated > cloudUpdated) {
+                                    console.log(`Local data is newer (${localUpdated} > ${cloudUpdated}). Syncing to Cloud.`);
+                                    saveData();
+                                } else {
+                                    // Both are 0 or equal (e.g. initial migration)
+                                    if (cloudUpdated === 0 && localUpdated === 0) {
+                                        if (hasLocalData) {
+                                            console.log("Both are timestamp-less. Prioritizing Local.");
+                                            saveData(); // Establish timestamp
+                                        } else {
+                                            console.log("Both are timestamp-less and local is empty. Taking Cloud.");
+                                            mergeCloudData(cloudData);
+                                        }
+                                    }
+                                }
                             } else {
                                 // 문서가 존재하지 않으면 초기 데이터 생성
                                 console.log("📝 Firestore 문서가 없습니다. 초기 데이터를 생성합니다...");
@@ -227,7 +224,9 @@ function loadData() {
 
 function saveData() {
     try {
-        isDirty = true; // Mark as dirty on local edit
+        isDirty = true;
+        roadmapData.updatedAt = Date.now();
+
         const dataToSave = {
             years: roadmapData.years,
             categories: roadmapData.categories,
@@ -239,27 +238,72 @@ function saveData() {
             businessNames: roadmapData.businessNames,
             investment: roadmapData.investment,
             management: roadmapData.management,
-            moneyPlan: roadmapData.moneyPlan
+            moneyPlan: roadmapData.moneyPlan,
+            updatedAt: roadmapData.updatedAt
         };
-        // Local Save
+
+        // Local Save (Instant)
         localStorage.setItem('supermoon_data', JSON.stringify(dataToSave));
 
-        // Cloud Save
+        // Cloud Save (Background)
         if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+            const auth = firebase.auth();
             const db = firebase.firestore();
-            db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave)
-                .then(() => {
-                    console.log("Cloud Saved");
-                    isDirty = false;
-                })
-                .catch(err => console.error("Cloud Save Failed:", err));
+
+            // Re-check authentication. If not signed in, Firestore might throw.
+            if (auth.currentUser) {
+                db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave)
+                    .then(() => {
+                        console.log("✅ Cloud Saved at " + new Date(roadmapData.updatedAt).toLocaleTimeString());
+                        isDirty = false;
+                    })
+                    .catch(err => {
+                        console.error("❌ Cloud Save Failed:", err);
+                        // We stay dirty so we can retry on next snapshot
+                    });
+            } else {
+                console.warn("Cloud save deferred: User not yet authenticated.");
+                // If not signed in, isDirty remains true. loadData's onSnapshot will pick it up when ready.
+            }
         }
     } catch (e) {
         console.error("Save Error:", e);
     }
 }
 
+// Global UI Update Trigger Helper
+function triggerUIUpdate() {
+    if (typeof renderAllBlocks === 'function') renderAllBlocks();
+    if (typeof updateUI === 'function') updateUI();
+    if (typeof renderSidebar === 'function') renderSidebar(window.currentPageType);
+    if (typeof updateSettlementUI === 'function') updateSettlementUI();
+    if (typeof renderMoneyPlanUI === 'function') renderMoneyPlanUI();
+    if (typeof renderMemos === 'function') renderMemos();
+}
+
+function mergeCloudData(cloudData) {
+    if (cloudData.years) roadmapData.years = cloudData.years;
+    if (cloudData.categories) roadmapData.categories = cloudData.categories;
+    if (cloudData.bankAccounts) roadmapData.bankAccounts = cloudData.bankAccounts;
+    if (cloudData.cards) roadmapData.cards = cloudData.cards;
+    if (cloudData.commonMemos) roadmapData.commonMemos = cloudData.commonMemos;
+    if (cloudData.categoryOperators) roadmapData.categoryOperators = cloudData.categoryOperators;
+    if (cloudData.categoryColors) roadmapData.categoryColors = cloudData.categoryColors;
+    if (cloudData.businessNames) roadmapData.businessNames = cloudData.businessNames;
+    if (cloudData.investment) roadmapData.investment = cloudData.investment;
+    if (cloudData.management) roadmapData.management = cloudData.management;
+    if (cloudData.moneyPlan) roadmapData.moneyPlan = cloudData.moneyPlan;
+    roadmapData.updatedAt = cloudData.updatedAt || 0;
+
+    localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
+    console.log("✅ Memory updated from Firestore");
+    triggerUIUpdate();
+}
+
 function processParsedData(parsed) {
+    if (parsed.updatedAt) roadmapData.updatedAt = parsed.updatedAt;
+    else roadmapData.updatedAt = 0;
+
     // Check if it's the new format (has 'years' property) or old format
     let yearsData;
     if (parsed.years) {

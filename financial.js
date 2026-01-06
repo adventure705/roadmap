@@ -1078,7 +1078,7 @@ function renderInstallmentDetails(itemId, monthIndex) {
     if (monthIndex !== -1) {
         // Calculate which installment sequence this month corresponds to
         const diffYears = currentYear - info.startYear;
-        const absMonthIndex = (diffYears * 12) + monthIndex - info.startMonth; // 0-based index from start
+        const absMonthIndex = (diffYears * 12) + monthIndex - (info.startMonth - 1); // 0-based index from start
 
         if (absMonthIndex >= 0 && absMonthIndex < info.months) {
             // Recalculate generic schedule (Ideally we store this, but recalculation is cheap)
