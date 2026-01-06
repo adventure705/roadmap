@@ -80,64 +80,93 @@ const roadmapData = {
 let currentYear = 2026;
 let currentMonth = 0; // 0 = Jan
 
-const FIXED_DOC_ID = 'main_roadmap_data'; // 모든 방문자가 공유하는 문서 ID
+const FIXED_DOC_ID = 'main_roadmap_data';
 let firebaseSyncStarted = false;
+let isDirty = false; // Flag to track local edits before sync
 
 function loadData() {
     try {
-        // 0. 데이터 손실 방지를 위한 로컬 백업 생성
         if (typeof localStorage !== 'undefined') {
             const currentData = localStorage.getItem('supermoon_data');
-            if (currentData) {
-                localStorage.setItem('supermoon_data_backup_last', currentData);
-            }
+            if (currentData) localStorage.setItem('supermoon_data_backup_last', currentData);
         }
 
-        // 1. 로컬 데이터 로드 (빠른 초기화)
         if (typeof localStorage !== 'undefined') {
             const saved = localStorage.getItem('supermoon_data');
             if (saved) {
                 const parsed = JSON.parse(saved);
-                // ... (기존 마이그레이션 로직 - 헬퍼를 호출하거나 여기에 삽입하여 간결하게 유지)
-                // 내부 파싱 로직을 재사용하기 위해 기존 파싱 로직을 포함합니다.
                 processParsedData(parsed);
             } else {
                 if (!roadmapData.businessNames) roadmapData.businessNames = [];
             }
         }
 
-        // 2. Firestore 동기화 초기화 (사용 가능한 경우)
         if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
             if (firebaseSyncStarted) return;
             firebaseSyncStarted = true;
             const auth = firebase.auth();
             const db = firebase.firestore();
 
-            auth.signInAnonymously().catch(console.error);
+            // Set Dirty Flag on Window for debug
+            window.roadmapIsDirty = isDirty;
+
+            auth.signInAnonymously().catch(e => console.error("Auth Failed:", e));
 
             auth.onAuthStateChanged(user => {
                 if (user) {
                     const docRef = db.collection('roadmap').doc(FIXED_DOC_ID);
 
-                    // 실시간 동기화
                     docRef.onSnapshot(doc => {
-                        if (doc.exists) {
-                            const cloudData = doc.data();
-                            // 메모리 업데이트
-                            roadmapData = cloudData;
-                            // 로컬 스토리지를 클라우드와 일치시킴
-                            localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
-                            console.log("Firestore에서 데이터 동기화됨");
+                        // If we have unsaved local changes (Dirty), we prioritize Local over Cloud (Push)
+                        // UNLESS this snapshot is triggered by our own write? 
+                        // Actually, if isDirty is true, it means we tried to save but maybe failed or haven't synced yet.
+                        // Ideally we check timestamps, but here we assume Local Edits > Old Cloud Data on startup.
 
-                            // UI 업데이트 트리거
-                            if (typeof renderAllBlocks === 'function') renderAllBlocks();
-                            if (typeof updateUI === 'function') updateUI();
-                            if (typeof renderSidebar === 'function') renderSidebar(window.currentPageType);
+                        if (isDirty) {
+                            console.log("Local changes detected. Overwriting Cloud with Local Data.");
+                            saveData(); // Attempt to save again (which clears Dirty if successful? No, we need to clear it)
+                            // Actually saveData will write to cloud.
+                            // But we need to be careful not to loop.
+                            // Let's rely on saveData's logic, but we need to reset isDirty only on success.
+                            // For now, let's just NOT overwrite local memory from Cloud if Dirty.
+
+                            // Better approach:
+                            // If Dirty, IGNORE this incoming snapshot (which is likely old data), 
+                            // AND FORCE a push.
+                            console.log("Pushing local data to Cloud...");
+                            // Create data payload from current roadmapData
+                            const dataToSave = {
+                                years: roadmapData.years,
+                                categories: roadmapData.categories,
+                                bankAccounts: roadmapData.bankAccounts,
+                                cards: roadmapData.cards,
+                                commonMemos: roadmapData.commonMemos,
+                                categoryOperators: roadmapData.categoryOperators,
+                                businessNames: roadmapData.businessNames,
+                                investment: roadmapData.investment,
+                                management: roadmapData.management,
+                                moneyPlan: roadmapData.moneyPlan
+                            };
+                            docRef.set(dataToSave).then(() => {
+                                console.log("Local changes pushed to Cloud.");
+                                isDirty = false; // Clear dirty flag after successful push
+                            }).catch(e => console.error("Push failed:", e));
+
                         } else {
-                            // 마이그레이션: 클라우드가 비어있으면 로컬 데이터 업로드
-                            if (localStorage.getItem('supermoon_data')) {
-                                console.log("로컬 데이터를 Firestore로 마이그레이션 중...");
-                                docRef.set(JSON.parse(localStorage.getItem('supermoon_data')));
+                            if (doc.exists) {
+                                const cloudData = doc.data();
+                                roadmapData = cloudData;
+                                localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
+                                console.log("Synced from Firestore");
+
+                                if (typeof renderAllBlocks === 'function') renderAllBlocks();
+                                if (typeof updateUI === 'function') updateUI();
+                                if (typeof renderSidebar === 'function') renderSidebar(window.currentPageType);
+                            } else {
+                                if (localStorage.getItem('supermoon_data')) {
+                                    console.log("Migrating local to Firestore...");
+                                    docRef.set(JSON.parse(localStorage.getItem('supermoon_data')));
+                                }
                             }
                         }
                     });
@@ -145,7 +174,7 @@ function loadData() {
             });
         }
     } catch (e) {
-        console.error('스토리지 오류:', e);
+        console.error('Storage error:', e);
         if (!roadmapData.businessNames) roadmapData.businessNames = [];
     }
 }
@@ -158,6 +187,7 @@ function loadData() {
 
 function saveData() {
     try {
+        isDirty = true; // Mark as dirty on local edit
         const dataToSave = {
             years: roadmapData.years,
             categories: roadmapData.categories,
@@ -174,12 +204,18 @@ function saveData() {
         localStorage.setItem('supermoon_data', JSON.stringify(dataToSave));
 
         // Cloud Save
-        if (typeof firebase !== 'undefined') {
+        if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
             const db = firebase.firestore();
-            // Debounce or just save? Realtime saves might be frequent.
-            db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave).catch(console.error);
+            db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave)
+                .then(() => {
+                    console.log("Cloud Saved");
+                    isDirty = false;
+                })
+                .catch(err => console.error("Cloud Save Failed:", err));
         }
-    } catch (e) { }
+    } catch (e) {
+        console.error("Save Error:", e);
+    }
 }
 
 function processParsedData(parsed) {

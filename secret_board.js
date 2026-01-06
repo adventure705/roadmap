@@ -740,4 +740,12 @@ function checkLockPassword() {
     }
 }
 
+function updateUI() {
+    renderTitles();
+    renderSubtitle();
+    renderMemos();
+    renderAllBlocks();
+}
+window.updateUI = updateUI;
+
 window.addEventListener('load', initSecretBoard);
