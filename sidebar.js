@@ -129,6 +129,17 @@ window.saveAndReloadSidebar = function () {
 }
 
 function renderSidebar(activePage) {
+    // 중복 방지: 이미 사이드바가 존재하면 기존 것을 제거
+    const existingSidebar = document.getElementById('mainSidebar');
+    if (existingSidebar) {
+        // 기존 사이드바와 관련 요소들 제거
+        const existingMobileHeader = document.querySelector('.lg\\:hidden.fixed.top-0');
+        const existingOverlay = document.getElementById('sidebarOverlay');
+        if (existingMobileHeader) existingMobileHeader.remove();
+        if (existingSidebar) existingSidebar.remove();
+        if (existingOverlay) existingOverlay.remove();
+    }
+
     const config = getMenuConfig();
     let menuHTML = '';
     config.forEach(item => {
@@ -255,8 +266,10 @@ function renderSidebar(activePage) {
         </div>
     </div>
     `;
-    // 안전한 DOM 삽입 방식 사용
-    document.body.insertAdjacentHTML('beforeend', globalModals);
+    // 안전한 DOM 삽입 방식 사용 (중복 방지)
+    if (!document.getElementById('sidebarManagerModal')) {
+        document.body.insertAdjacentHTML('beforeend', globalModals);
+    }
 }
 
 // --- Global Memo Functions ---
