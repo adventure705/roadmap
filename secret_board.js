@@ -5,6 +5,7 @@ let activeBlockId = null;
 
 // 새해 기본 구조
 const defaultSecretBoard = {
+    pageTitle: "시크릿 보드 🚩",
     subtitle: "자산 현황 및 부채 관리 (연도별 관리)",
     // 블록 1: 자산 내역 (요약)
     assetSummary: {
@@ -114,7 +115,7 @@ function initSecretBoard() {
     if (!yearData.secretBoard.assetDetails.title) yearData.secretBoard.assetDetails.title = "📊 자산 상세 내역";
     if (!yearData.secretBoard.assetDetails2.title) yearData.secretBoard.assetDetails2.title = "📊 자산 상세 내역 2";
     if (!yearData.secretBoard.statusSummary.title) yearData.secretBoard.statusSummary.title = "📝 자산 현황 수동 입력";
-
+    if (!yearData.secretBoard.pageTitle) yearData.secretBoard.pageTitle = "시크릿 보드 🚩";
     saveData();
 
     renderAllBlocks();
@@ -136,6 +137,17 @@ function renderTitles() {
     setVal('titleLiabilitySummary', sb.liabilitySummary.title || "💳 항목별 부채 (요약)");
     setVal('titleAssetDetails', sb.assetDetails.title || "📊 자산 상세 내역");
     setVal('titleAssetDetails2', sb.assetDetails2.title || "📊 자산 상세 내역 2");
+
+    const pageTitleInput = document.getElementById('pageTitle');
+    if (pageTitleInput) pageTitleInput.value = sb.pageTitle || "시크릿 보드 🚩";
+}
+
+function updatePageTitle(val) {
+    const sb = roadmapData.years[currentYear].secretBoard;
+    sb.pageTitle = val;
+    saveData();
+    // Refresh sidebar to reflect name change if needed
+    if (typeof renderSidebar === 'function') renderSidebar('secret_board');
 }
 
 
@@ -745,6 +757,7 @@ function updateUI() {
     renderSubtitle();
     renderMemos();
     renderAllBlocks();
+    if (typeof renderSidebar === 'function') renderSidebar('secret_board');
 }
 window.updateUI = updateUI;
 
