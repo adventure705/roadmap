@@ -223,7 +223,8 @@ function renderSidebar(activePage) {
         });
     </script>
     `;
-    document.write(sidebarHTML);
+    // 안전한 DOM 삽입 방식 사용 (document.write는 페이지를 덮어씀)
+    document.body.insertAdjacentHTML('afterbegin', sidebarHTML);
     // Move the shared modals outside aside to avoid translation issues
     const globalModals = `
     <!-- Sidebar Manager Modal -->
@@ -254,7 +255,8 @@ function renderSidebar(activePage) {
         </div>
     </div>
     `;
-    document.write(globalModals);
+    // 안전한 DOM 삽입 방식 사용
+    document.body.insertAdjacentHTML('beforeend', globalModals);
 }
 
 // --- Global Memo Functions ---
