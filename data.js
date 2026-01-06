@@ -85,6 +85,14 @@ let firebaseSyncStarted = false;
 
 function loadData() {
     try {
+        // 0. 데이터 손실 방지를 위한 로컬 백업 생성
+        if (typeof localStorage !== 'undefined') {
+            const currentData = localStorage.getItem('supermoon_data');
+            if (currentData) {
+                localStorage.setItem('supermoon_data_backup_last', currentData);
+            }
+        }
+
         // 1. 로컬 데이터 로드 (빠른 초기화)
         if (typeof localStorage !== 'undefined') {
             const saved = localStorage.getItem('supermoon_data');
