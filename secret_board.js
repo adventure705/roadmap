@@ -1,23 +1,22 @@
-
-// Reusing logic from investment.js but tailored for Secret Board
-// Multiple reusable tables: assetSummary, liabilitySummary, assetDetails
+// investment.js 로직을 재사용하지만 시크릿 보드에 맞게 수정됨
+// 다수의 재사용 가능한 테이블: assetSummary, liabilitySummary, assetDetails
 
 let activeBlockId = null;
 
-// Default structure for new year
+// 새해 기본 구조
 const defaultSecretBoard = {
     subtitle: "자산 현황 및 부채 관리 (연도별 관리)",
-    // Block 1: Asset Breakdown (Summary)
+    // 블록 1: 자산 내역 (요약)
     assetSummary: {
         cols: [
             { id: 'cat', name: '자산 항목', width: 150, type: 'text' },
-            { id: 'amount', name: '금액', width: 150, type: 'number', sum: true }, // Auto sums
-            { id: 'ratio', name: '비중', width: 80, type: 'text' }, // User entered or calc? User said "Manage as table". Let's allow input.
+            { id: 'amount', name: '금액', width: 150, type: 'number', sum: true }, // 자동 합계
+            { id: 'ratio', name: '비중', width: 80, type: 'text' }, // 사용자 입력
             { id: 'note', name: '비고', width: 200, type: 'text' }
         ],
         rows: []
     },
-    // Block 2: Liability Breakdown (Summary)
+    // 블록 2: 부채 내역 (요약)
     liabilitySummary: {
         cols: [
             { id: 'cat', name: '부채 항목', width: 150, type: 'text' },
@@ -27,7 +26,7 @@ const defaultSecretBoard = {
         ],
         rows: []
     },
-    // Block 3: Asset Details
+    // 블록 3: 자산 상세
     assetDetails: {
         cols: [
             { id: 'date', name: '기준일', width: 100, type: 'text' },
@@ -40,7 +39,7 @@ const defaultSecretBoard = {
         ],
         rows: []
     },
-    // Block 4: Asset Details 2 (Copy)
+    // 블록 4: 자산 상세 2 (복사본)
     assetDetails2: {
         cols: [
             { id: 'date', name: '기준일', width: 100, type: 'text' },

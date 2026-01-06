@@ -8,7 +8,7 @@ const roadmapData = {
             fixedIncome: new Array(12).fill(0),
             expenses: new Array(12).fill(0)
         },
-        // Detailed Breakdown Data
+        // 상세 내역 데이터
         details: {
             income: [],      // { id, name, values: [12] }
             fixed: [],       // { id, name, values: [12] }
@@ -80,26 +80,28 @@ const roadmapData = {
 let currentYear = 2026;
 let currentMonth = 0; // 0 = Jan
 
-const FIXED_DOC_ID = 'main_roadmap_data'; // Shared document ID for all visitors
+const FIXED_DOC_ID = 'main_roadmap_data'; // 모든 방문자가 공유하는 문서 ID
+let firebaseSyncStarted = false;
 
 function loadData() {
     try {
-        // 1. Load Local Data (Fast Init)
+        // 1. 로컬 데이터 로드 (빠른 초기화)
         if (typeof localStorage !== 'undefined') {
             const saved = localStorage.getItem('supermoon_data');
             if (saved) {
                 const parsed = JSON.parse(saved);
-                // ... (Existing Migration Logic - Keeping it compact by calling a helper or inserting it)
-                // reusing internal parsing logic is hard if I replace the function.
-                // I will include the full existing parsing logic here to be safe.
+                // ... (기존 마이그레이션 로직 - 헬퍼를 호출하거나 여기에 삽입하여 간결하게 유지)
+                // 내부 파싱 로직을 재사용하기 위해 기존 파싱 로직을 포함합니다.
                 processParsedData(parsed);
             } else {
                 if (!roadmapData.businessNames) roadmapData.businessNames = [];
             }
         }
 
-        // 2. Initialize Firestore Sync (If available)
-        if (typeof firebase !== 'undefined') {
+        // 2. Firestore 동기화 초기화 (사용 가능한 경우)
+        if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+            if (firebaseSyncStarted) return;
+            firebaseSyncStarted = true;
             const auth = firebase.auth();
             const db = firebase.firestore();
 
@@ -109,24 +111,24 @@ function loadData() {
                 if (user) {
                     const docRef = db.collection('roadmap').doc(FIXED_DOC_ID);
 
-                    // Realtime Sync
+                    // 실시간 동기화
                     docRef.onSnapshot(doc => {
                         if (doc.exists) {
                             const cloudData = doc.data();
-                            // Update Memory
+                            // 메모리 업데이트
                             roadmapData = cloudData;
-                            // Update LocalStorage to match Cloud
+                            // 로컬 스토리지를 클라우드와 일치시킴
                             localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
-                            console.log("Data synced from Firestore");
+                            console.log("Firestore에서 데이터 동기화됨");
 
-                            // Trigger UI Update
+                            // UI 업데이트 트리거
                             if (typeof renderAllBlocks === 'function') renderAllBlocks();
                             if (typeof updateUI === 'function') updateUI();
                             if (typeof renderSidebar === 'function') renderSidebar(window.currentPageType);
                         } else {
-                            // Migration: Cloud is empty, upload local data
+                            // 마이그레이션: 클라우드가 비어있으면 로컬 데이터 업로드
                             if (localStorage.getItem('supermoon_data')) {
-                                console.log("Migrating local data to Firestore...");
+                                console.log("로컬 데이터를 Firestore로 마이그레이션 중...");
                                 docRef.set(JSON.parse(localStorage.getItem('supermoon_data')));
                             }
                         }
@@ -135,7 +137,7 @@ function loadData() {
             });
         }
     } catch (e) {
-        console.error('Storage error:', e);
+        console.error('스토리지 오류:', e);
         if (!roadmapData.businessNames) roadmapData.businessNames = [];
     }
 }
