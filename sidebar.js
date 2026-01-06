@@ -11,6 +11,7 @@ const defaultMenuConfig = [
     { type: 'header', label: '수입 관리' },
     { type: 'item', id: 'income', label: '수입', icon: '💰', link: 'income.html' },
     { type: 'item', id: 'investment', label: '투자 수입', icon: '📈', link: 'investment.html' },
+    { type: 'item', id: 'secret_board', label: '시크릿 보드', icon: '🚩', link: 'secret_board.html' },
     { type: 'header', label: '사업 관리' },
     { type: 'item', id: 'business', label: '사업 관리', icon: '💼', link: 'business.html' },
     { type: 'header', label: '정보 관리' },
