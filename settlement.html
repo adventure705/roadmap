@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>슈퍼문 로드맵 - 지출 예정산</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .sidebar-link {
+            transition: all 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border-right: 3px solid #60a5fa;
+        }
+
+        .table-input {
+            background: transparent;
+            width: 100%;
+            text-align: right;
+            color: inherit;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            padding: 4px;
+            font-family: 'Pretendard', sans-serif;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .table-input:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .table-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: rgba(30, 41, 59, 0.9);
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+        }
+
+        .sheet-table th,
+        .sheet-table td {
+            white-space: nowrap;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sheet-table th:first-child,
+        .sheet-table td:first-child {
+            /* width: 200px; */
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: #1e293b;
+            z-index: 10;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { dark: '#0f172a', card: '#1e293b' } } }
+        }
+    </script>
+</head>
+
+<body class="bg-dark text-white min-h-screen flex flex-col lg:flex-row shadow-2xl relative overflow-x-hidden">
+    <script src="sidebar.js"></script>
+    <script>renderSidebar('settlement');</script>
+
+    <main class="flex-1 min-h-screen bg-dark p-4 lg:p-8 relative">
+        <section class="w-full h-full pb-20">
+            <header class="mb-6">
+                <!-- Top Row -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center gap-4">
+                            <h2 class="text-2xl font-bold mb-1">지출 예정산</h2>
+
+                            <!-- Year/Month Selector -->
+                            <div class="flex gap-4">
+                                <div class="flex items-center bg-card rounded-lg p-1 border border-white/10 ml-4">
+                                    <button onclick="changeYear(-1)"
+                                        class="px-2 py-1 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition text-xs">◀</button>
+                                    <span id="sheetYearDisplay"
+                                        class="px-3 font-bold text-sm min-w-[60px] text-center">2026</span>
+                                    <button onclick="changeYear(1)"
+                                        class="px-2 py-1 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition text-xs">▶</button>
+                                </div>
+                                <div class="flex items-center bg-card rounded-lg p-1 border border-white/10">
+                                    <button onclick="changeMonth(-1)"
+                                        class="px-2 py-1 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition text-xs">◀</button>
+                                    <span id="sheetMonthDisplay"
+                                        class="px-3 font-bold text-sm min-w-[50px] text-center">1월</span>
+                                    <button onclick="changeMonth(1)"
+                                        class="px-2 py-1 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition text-xs">▶</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- View Toggle -->
+                        <div class="flex gap-2">
+                            <button onclick="toggleSettlementView('monthly')" id="btnMonthlyView"
+                                class="bg-blue-600 text-white px-3 py-1 rounded text-sm font-bold opacity-100">월별
+                                보기</button>
+                            <button onclick="toggleSettlementView('weekly')" id="btnWeeklyView"
+                                class="bg-gray-700 text-gray-300 px-3 py-1 rounded text-sm font-bold hover:bg-gray-600 transition">주간
+                                보기</button>
+                            <button onclick="openTransactionManager()"
+                                class="bg-purple-600 text-white px-3 py-1 rounded text-sm font-bold hover:bg-purple-500 transition shadow-lg border border-purple-400/30">
+                                📋 상세 내역 관리
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <label
+                            class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 cursor-pointer">
+                            <span>📂</span> 엑셀 업로드
+                            <input type="file" id="xlsInput" accept=".xlsx, .xls" class="hidden"
+                                onchange="handleExcelUpload(this)">
+                        </label>
+                        <button onclick="openBudgetModal()"
+                            class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition">💵
+                            예산 설정</button>
+                    </div>
+                </div>
+
+                <!-- Memo -->
+                <div id="memoContainer" class="mt-1"></div>
+            </header>
+
+            <!-- Monthly View Container -->
+            <div id="monthlyViewCanvas" class="w-full mb-6 glass-panel rounded-xl p-4 overflow-hidden shadow-2xl">
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div class="bg-gray-800/80 p-4 rounded-lg border-l-4 border-blue-500">
+                        <p class="text-xs text-gray-400 mb-1">총 예산</p>
+                        <p id="summaryBudget" class="text-xl font-bold text-white">0원</p>
+                    </div>
+                    <div class="bg-gray-800/80 p-4 rounded-lg border-l-4 border-red-500">
+                        <p class="text-xs text-gray-400 mb-1">총 지출</p>
+                        <p id="summaryActual" class="text-xl font-bold text-white">0원</p>
+                    </div>
+                    <div class="bg-gray-800/80 p-4 rounded-lg border-l-4 border-green-500">
+                        <p class="text-xs text-gray-400 mb-1">잔액 (방어율)</p>
+                        <p id="summaryDiff" class="text-xl font-bold text-white">0원</p>
+                    </div>
+                    <!-- New Separate Summary for Fixed/Installments -->
+                    <div class="bg-gray-800/80 p-4 rounded-lg border-l-4 border-purple-500">
+                        <p class="text-xs text-gray-400 mb-1">제외 항목 합계</p>
+                        <p id="summaryExcluded" class="text-xl font-bold text-purple-300">0원</p>
+                    </div>
+                </div>
+
+                <!-- Pie Chart Section -->
+                <div
+                    class="flex flex-col md:flex-row justify-center items-center gap-12 mb-8 bg-gray-900/30 p-6 rounded-2xl border border-white/5 mx-auto max-w-4xl">
+                    <div id="settlementPieChart"
+                        class="w-64 h-64 rounded-full shadow-2xl relative grid place-items-center bg-gray-800 transition-all duration-500 flex-shrink-0">
+                        <div
+                            class="w-40 h-40 bg-gray-900/90 rounded-full z-10 flex items-center justify-center flex-col shadow-inner backdrop-blur-sm">
+                            <span class="text-xs text-gray-400 mb-1">총 실지출</span>
+                            <span id="chartTotalLabel" class="text-lg font-bold text-white tracking-tight">0원</span>
+                        </div>
+                    </div>
+                    <!-- Side Legend -->
+                    <div id="settlementChartLegend" class="grid grid-cols-2 gap-x-8 gap-y-3 text-sm text-gray-300">
+                        <!-- JS Rendered -->
+                    </div>
+                </div>
+
+                <!-- Monthly Table -->
+                <table class="w-full text-sm text-center text-gray-300 sheet-table display-table">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-900/50">
+                        <tr>
+                            <th class="px-6 py-4">카테고리</th>
+                            <th class="px-6 py-4 text-right">예산</th>
+                            <th class="px-6 py-4 text-right">전월 지출</th>
+                            <th class="px-6 py-4 text-right">당월 지출</th>
+                            <th class="px-6 py-4 text-right">전월비</th>
+                            <th class="px-6 py-4 text-center">비중</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlyTableBody">
+                        <!-- JS Rendered -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Weekly View Container (Hidden initially) -->
+            <div id="weeklyViewCanvas"
+                class="w-full mb-6 glass-panel rounded-xl p-4 overflow-hidden shadow-2xl hidden flex flex-col gap-6">
+                <!-- JS Rendered: Will contain multiple tables per week -->
+            </div>
+
+            <!-- Transaction Manager Modal (Originally Inline) -->
+            <div id="transactionManagerModal"
+                class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[200] opacity-0 transition-opacity duration-300">
+                <div
+                    class="bg-gray-900 w-[95%] max-w-7xl h-[85vh] rounded-2xl border border-white/10 flex flex-col shadow-2xl relative transform scale-95 transition-transform duration-300">
+                    <!-- Header -->
+                    <div class="flex justify-between items-center p-6 border-b border-white/10 bg-gray-900 z-10">
+                        <div>
+                            <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+                                📋 상세 거래 내역 관리
+                            </h3>
+                            <p class="text-sm text-gray-400 mt-1">거래 내역 수정, 삭제 및 카테고리 일괄 관리를 할 수 있습니다. 변경 시 즉시 반영됩니다.
+                            </p>
+                        </div>
+                        <button onclick="closeTransactionManager()"
+                            class="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white p-2 rounded-full transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="p-6 pb-2 bg-gray-900/50">
+                        <div
+                            class="flex flex-wrap gap-4 justify-between items-center bg-gray-800/30 p-4 rounded-xl border border-white/5">
+                            <div class="flex items-center gap-4">
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2.5 text-gray-500">🔍</span>
+                                    <input type="text" id="detailSearchInput" placeholder="거래내역 검색..."
+                                        class="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg pl-10 pr-4 py-2 focus:border-blue-500 outline-none w-64 transition focus:bg-gray-800"
+                                        oninput="filterDetailList()">
+                                </div>
+                                <div class="text-sm text-gray-500" id="detailCountDisplay">
+                                    <!-- JS populated count -->
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <select id="detailBatchCategory"
+                                    class="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-4 py-2 focus:border-blue-500 outline-none cursor-pointer hover:bg-gray-800 transition">
+                                    <!-- Populated via JS -->
+                                </select>
+                                <button onclick="applyBatchCategoryToDetail()"
+                                    class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-lg shadow-blue-900/20">
+                                    선택항목 적용
+                                </button>
+                                <div class="w-px h-6 bg-gray-700 mx-2"></div>
+                                <button onclick="deleteSelectedDetails()"
+                                    class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-lg shadow-red-900/20 flex items-center gap-2">
+                                    <span>🗑️</span> 선택 삭제
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- List Area -->
+                    <div class="flex-1 overflow-hidden p-6 pt-2">
+                        <div
+                            class="h-full overflow-y-auto custom-scrollbar rounded-xl border border-white/5 bg-gray-900/30">
+                            <table class="w-full text-sm text-center text-gray-300">
+                                <thead class="text-xs text-gray-400 uppercase bg-gray-800 sticky top-0 z-10 shadow-md">
+                                    <tr>
+                                        <th class="px-6 py-4 w-16 text-center bg-gray-800"><input type="checkbox"
+                                                id="checkAllDetail" onclick="toggleAllDetailChecks(this)"
+                                                class="rounded bg-gray-700 border-gray-600 focus:ring-blue-500 w-4 h-4 cursor-pointer">
+                                        </th>
+                                        <th class="px-6 py-4 cursor-pointer hover:text-white select-none bg-gray-800 transition"
+                                            onclick="sortTransactions('date')">날짜 <span
+                                                class="text-[10px] ml-1 opacity-50">↕</span></th>
+                                        <th class="px-6 py-4 text-left cursor-pointer hover:text-white select-none bg-gray-800 transition"
+                                            onclick="sortTransactions('name')">내용 <span
+                                                class="text-[10px] ml-1 opacity-50">↕</span></th>
+                                        <th class="px-6 py-4 text-right cursor-pointer hover:text-white select-none bg-gray-800 transition"
+                                            onclick="sortTransactions('amount')">금액 <span
+                                                class="text-[10px] ml-1 opacity-50">↕</span></th>
+                                        <th class="px-6 py-4 bg-gray-800">카테고리</th>
+                                        <th class="px-6 py-4 text-center bg-gray-800">관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactionListBody" class="divide-y divide-white/5">
+                                    <!-- JS Rendered Transactions -->
+                                </tbody>
+                            </table>
+                            <div id="noTransactionMsg"
+                                class="hidden flex flex-col items-center justify-center h-full text-gray-500 py-20">
+                                <div class="text-4xl mb-4 opacity-30">📭</div>
+                                <p>표시할 거래 내역이 없습니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekly View Container (Hidden initially) -->
+            <div id="weeklyViewCanvas"
+                class="w-full mb-6 glass-panel rounded-xl p-4 overflow-hidden shadow-2xl hidden flex flex-col gap-6">
+                <!-- JS Rendered: Will contain multiple tables per week -->
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Bulk Classification Modal -->
+    <div id="bulkClassificationModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100]">
+        <div
+            class="bg-card glass-panel p-6 rounded-2xl w-[800px] shadow-2xl border border-white/10 max-h-[90vh] flex flex-col">
+            <h3 class="text-xl font-bold mb-2">미분류 항목 일괄 분류</h3>
+            <p class="text-sm text-gray-400 mb-4">새로운 거래내역이 발견되었습니다. 카테고리를 지정해주세요.</p>
+
+            <!-- Search & Batch Actions -->
+            <div class="flex flex-wrap gap-2 mb-2 justify-between items-center bg-gray-900/30 p-2 rounded">
+                <div class="flex items-center gap-2">
+                    <input type="text" id="bulkSearchInput" placeholder="내용 검색..."
+                        class="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-1.5 focus:border-blue-500 outline-none w-48"
+                        oninput="filterBulkList()">
+                </div>
+                <div class="flex items-center gap-2">
+                    <select id="bulkBatchCategory"
+                        class="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-1.5 focus:border-blue-500 outline-none">
+                        <!-- Populated via JS -->
+                    </select>
+                    <button onclick="applyBatchCategory()"
+                        class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-sm font-bold transition">선택항목
+                        일괄적용</button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto mb-4 border border-white/5 rounded p-2 custom-scrollbar">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-900/50 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-4 py-2 w-10 text-center"><input type="checkbox" id="checkAllBulk"
+                                    onclick="toggleAllBulkChecks(this)"></th>
+                            <th class="px-4 py-2">날짜</th>
+                            <th class="px-4 py-2 max-w-[200px]">내용 (가맹점)</th>
+                            <th class="px-4 py-2">키워드 (규칙)</th>
+                            <th class="px-4 py-2 text-right">금액</th>
+                            <th class="px-4 py-2">카테고리 설정</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bulkClassifyList">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-4 border-t border-white/10">
+                <button onclick="closeBulkModal()" class="px-4 py-2 text-gray-400 hover:text-white text-sm">취소</button>
+                <button onclick="saveBulkClassifications()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition">일괄
+                    저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Setting Modal -->
+    <div id="budgetModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div
+            class="bg-card glass-panel p-6 rounded-2xl w-[600px] shadow-2xl border border-white/10 max-h-[80vh] flex flex-col">
+            <h3 class="text-xl font-bold mb-4">월 예산 설정</h3>
+            <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-gray-400 border-b border-white/10">
+                            <th class="pb-2 text-left">카테고리</th>
+                            <th class="pb-2 text-right">예산 금액</th>
+                        </tr>
+                    </thead>
+                    <tbody id="budgetModalList">
+                        <!-- Inputs -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-6 flex justify-end gap-2 pt-4 border-t border-white/10">
+                <button onclick="closeBudgetModal()"
+                    class="px-4 py-2 text-gray-400 hover:text-white text-sm">취소</button>
+                <button onclick="saveBudgets()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="financial.js"></script>
+    <script src="settlement.js"></script>
+    <script>
+        window.addEventListener('load', () => {
+            // Ensure data is loaded first
+            loadData();
+            // Initialize Settlement Page
+            initSettlementPage();
+        });
+    </script>
+</body>
+
+</html>

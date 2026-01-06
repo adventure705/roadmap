@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>슈퍼문 로드맵 - 변동 지출</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .sidebar-link {
+            transition: all 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border-right: 3px solid #60a5fa;
+        }
+
+        .table-input {
+            background: transparent;
+            width: 100%;
+            text-align: right;
+            color: inherit;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            padding: 4px;
+            font-family: 'Pretendard', sans-serif;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .table-input:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .table-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: rgba(30, 41, 59, 0.9);
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+        }
+
+        .sheet-table th,
+        .sheet-table td {
+            white-space: nowrap;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sheet-table th:first-child,
+        content: sticky;
+
+        .sheet-table th:first-child,
+        .sheet-table td:first-child {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: #1e293b;
+            z-index: 10;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { dark: '#0f172a', card: '#1e293b' } } }
+        }
+    </script>
+</head>
+
+<body class="bg-dark text-white min-h-screen flex flex-col lg:flex-row shadow-2xl relative overflow-x-hidden">
+    <script src="sidebar.js"></script>
+    <script>renderSidebar('variable');</script>
+
+    <main class="flex-1 min-h-screen bg-dark p-4 lg:p-8 relative">
+        <section class="w-full h-full pb-20">
+            <header class="mb-6">
+                <!-- Top Row: Title, Month Selector, Buttons -->
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center gap-4">
+                            <h2 class="text-2xl font-bold mb-1">변동 지출 관리</h2>
+
+                            <!-- Month Selector -->
+                            <div class="flex gap-4">
+                                <div class="flex items-center bg-card rounded-lg p-1 border border-white/10 ml-4">
+                                    <button onclick="changeYear(-1)"
+                                        class="px-2 py-1 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition text-xs">◀</button>
+                                    <span id="sheetYearDisplay"
+                                        class="px-3 font-bold text-sm min-w-[60px] text-center">2026</span>
+                                    <button onclick="changeYear(1)"
+                                        class="px-2 py-1 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition text-xs">▶</button>
+                                </div>
+                                <div class="flex items-center bg-card rounded-lg p-1 border border-white/10">
+                                    <button onclick="changeMonth(-1)"
+                                        class="px-2 py-1 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition text-xs">◀</button>
+                                    <span id="sheetMonthDisplay"
+                                        class="px-3 font-bold text-sm min-w-[50px] text-center">1월</span>
+                                    <button onclick="changeMonth(1)"
+                                        class="px-2 py-1 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition text-xs">▶</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Memo Container -->
+                        <div id="memoContainer" class="mt-1"></div>
+                    </div>
+
+                    <div>
+                        <button onclick="openCopyMonthModal()"
+                            class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition mr-2">📋
+                            데이터 복사</button>
+                        <button onclick="openCardManager()"
+                            class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition mr-2">💳
+                            카드 관리</button>
+                        <button onclick="openBankManager()"
+                            class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition mr-2">🏦
+                            출금계좌 관리</button>
+                        <button onclick="openCategoryManager()"
+                            class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition mr-2">🗂️
+                            분류 관리</button>
+                        <button onclick="addItem()"
+                            class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 inline-flex">
+                            <span>+</span> 항목 추가
+                        </button>
+                    </div>
+                </div>
+
+            </header>
+
+            <div class="glass-panel rounded-xl overflow-hidden shadow-2xl">
+                <table class="w-full text-sm text-left text-gray-300 sheet-table">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-900/50">
+                        <tr id="sheetHeaderRow"></tr>
+                    </thead>
+                    <tbody id="sheetBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Category Manager Modal -->
+    <div id="categoryModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-card glass-panel p-6 rounded-2xl w-96 shadow-2xl border border-white/10">
+            <h3 class="text-xl font-bold mb-4">분류 항목 관리</h3>
+            <div id="catManagerList" class="max-h-60 overflow-y-auto mb-4 border border-white/5 rounded p-2">
+                <!-- List populated by JS -->
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="newCatInput"
+                    class="flex-1 bg-gray-800 border border-gray-600 text-white text-sm rounded-lg p-2.5 focus:outline-none focus:border-blue-500"
+                    placeholder="새 분류 이름">
+                <button onclick="addCategory()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-4 rounded-lg text-sm transition">추가</button>
+            </div>
+            <div class="mt-6 text-right">
+                <button onclick="closeCategoryManager()" class="text-gray-400 hover:text-white text-sm">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bank Manager Modal -->
+    <div id="bankModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-card glass-panel p-6 rounded-2xl w-96 shadow-2xl border border-white/10">
+            <h3 class="text-xl font-bold mb-4">출금계좌 관리</h3>
+            <div id="bankManagerList" class="max-h-60 overflow-y-auto mb-4 border border-white/5 rounded p-2">
+                <!-- List populated by JS -->
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="newBankInput"
+                    class="flex-1 bg-gray-800 border border-gray-600 text-white text-sm rounded-lg p-2.5 focus:outline-none focus:border-blue-500"
+                    placeholder="새 계좌 이름">
+                <button onclick="addBankAccount()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-4 rounded-lg text-sm transition">추가</button>
+            </div>
+            <div class="mt-6 text-right">
+                <button onclick="closeBankManager()" class="text-gray-400 hover:text-white text-sm">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card Manager Modal -->
+    <div id="cardModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-card glass-panel p-6 rounded-2xl w-96 shadow-2xl border border-white/10">
+            <h3 class="text-xl font-bold mb-4">카드 관리</h3>
+            <div id="cardManagerList" class="max-h-60 overflow-y-auto mb-4 border border-white/5 rounded p-2">
+                <!-- List populated by JS -->
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="newCardInput"
+                    class="flex-1 bg-gray-800 border border-gray-600 text-white text-sm rounded-lg p-2.5 focus:outline-none focus:border-blue-500"
+                    placeholder="새 카드 이름">
+                <button onclick="addCard()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-4 rounded-lg text-sm transition">추가</button>
+            </div>
+            <div class="mt-6 text-right">
+                <button onclick="closeCardManager()" class="text-gray-400 hover:text-white text-sm">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Item Modal (for Monthly View) -->
+    <div id="addItemModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-card glass-panel p-6 rounded-2xl w-96 shadow-2xl border border-white/10">
+            <h3 class="text-xl font-bold mb-4">변동 지출 내역 추가</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">항목명</label>
+                    <input type="text" id="addItemName"
+                        class="w-full bg-gray-800 border border-gray-600 text-white text-sm rounded-lg p-2.5 focus:outline-none focus:border-blue-500"
+                        placeholder="예: 식비">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">분류</label>
+                    <select id="addItemCategory"
+                        class="bg-gray-800 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">카드</label>
+                    <select id="addItemCard"
+                        class="bg-gray-800 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">출금계좌</label>
+                    <select id="addItemBank"
+                        class="bg-gray-800 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">금액 (원)</label>
+                    <input type="text" id="addItemAmount"
+                        class="w-full bg-gray-800 border border-gray-600 text-white text-sm rounded-lg p-2.5 focus:outline-none focus:border-blue-500 font-bold text-right"
+                        placeholder="0"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-2">
+                <button onclick="closeAddItemModal()"
+                    class="px-4 py-2 text-gray-400 hover:text-white text-sm">취소</button>
+                <button onclick="confirmAddItem()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Copy Month Data Modal -->
+    <div id="copyMonthModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-card glass-panel p-6 rounded-2xl w-96 shadow-2xl border border-white/10">
+            <h3 class="text-xl font-bold mb-4">월 데이터 복사</h3>
+            <p class="text-gray-400 text-sm mb-4">현재 월의 데이터를 선택한 연도/월로 복사합니다.<br>대상 월의 기존 데이터는 덮어씌워집니다.</p>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-400 mb-1">대상 연도</label>
+                <select id="copyTargetYear"
+                    class="bg-gray-800 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-400 mb-1">대상 월</label>
+                <select id="copyTargetMonth"
+                    class="bg-gray-800 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeCopyMonthModal()"
+                    class="px-4 py-2 text-gray-400 hover:text-white text-sm">취소</button>
+                <button onclick="confirmCopyMonth()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition">복사하기</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="financial.js"></script>
+    <script>
+        // Init with monthly view
+        window.addEventListener('load', () => initFinancialPage('variable', 'monthly'));
+    </script>
+</body>
+
+</html>

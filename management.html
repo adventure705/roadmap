@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>슈퍼문 로드맵 - 정보 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .sidebar-link {
+            transition: all 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border-right: 3px solid #60a5fa;
+        }
+
+        table {
+            table-layout: fixed;
+            width: max-content;
+            min-width: 100%;
+            border-spacing: 0;
+        }
+
+        th,
+        td {
+            vertical-align: middle !important;
+            position: relative;
+            padding: 0 !important;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 1px;
+            /* Trick to allow child height 100% */
+            overflow: visible;
+        }
+
+        /* Flex centering wrapper inside table cell */
+        .cell-wrapper {
+            display: flex;
+            align-items: center;
+            /* Vertical Center */
+            justify-content: center;
+            /* Horizontal Center */
+            width: 100%;
+            height: 100%;
+            min-height: 100%;
+            box-sizing: border-box;
+            padding: 0;
+            margin: 0;
+        }
+
+        .table-input,
+        .header-input,
+        .row-header-input {
+            background: transparent;
+            width: 100%;
+            height: auto;
+            min-height: 0 !important;
+            /* Allow shrinking below default height */
+            text-align: center;
+            color: inherit;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            font-variant-numeric: tabular-nums;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.4;
+            display: inline-block;
+            resize: none;
+            overflow: hidden;
+            box-sizing: border-box;
+            padding: 4px 8px;
+            margin: auto 0;
+            font-family: inherit;
+        }
+
+        .table-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .header-input {
+            font-weight: bold;
+            color: #94a3b8;
+        }
+
+        .header-input:focus {
+            outline: none;
+            color: white;
+        }
+
+        .row-header-input {
+            font-weight: bold;
+            color: white;
+        }
+
+        .row-header-input:focus {
+            outline: none;
+            color: #60a5fa;
+        }
+
+        .resizer-v {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .resizer-v:hover {
+            background: rgba(59, 130, 246, 0.4);
+        }
+
+        .resizer-h {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            cursor: row-resize;
+            background: transparent;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .resizer-h:hover {
+            background: rgba(59, 130, 246, 0.4);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+    </style>
+    <script> tailwind.config = { theme: { extend: { colors: { dark: '#0f172a', card: '#1e293b' } } } } </script>
+</head>
+
+<body class="bg-dark text-white min-h-screen flex flex-col lg:flex-row shadow-2xl relative overflow-x-hidden">
+    <script src="sidebar.js"></script>
+    <script>renderSidebar('management');</script>
+
+    <main class="flex-1 min-h-screen bg-dark p-4 lg:p-8 relative">
+        <div class="max-w-7xl mx-auto space-y-8 pb-20">
+            <div>
+                <h2 class="text-3xl font-bold mb-2">정보 관리</h2>
+                <input type="text" id="pageSubtitle"
+                    class="bg-transparent text-gray-400 text-sm focus:outline-none focus:text-white w-full max-w-2xl"
+                    onchange="updateSubtitle(this.value)">
+            </div>
+
+            <!-- Memo Container -->
+            <div id="memoContainer" class="mt-1"></div>
+
+            <!-- Block 1: General Info Grid -->
+            <div class="glass-panel rounded-2xl p-6 shadow-xl">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl text-blue-400">📋</span>
+                        <input type="text" id="titleBlock1"
+                            class="bg-transparent text-xl font-bold focus:outline-none focus:text-blue-400 w-64"
+                            onchange="updateBlockTitle('block1', this.value)">
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="openStructureManager('block1')"
+                            class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-xs font-bold transition">⚙️
+                            구조 및 색상 관리</button>
+                        <button onclick="addColumn('block1')"
+                            class="bg-blue-900/40 hover:bg-blue-900/60 px-3 py-1.5 rounded-lg text-xs font-bold transition text-blue-300">＋
+                            열 추가</button>
+                        <button onclick="addRow('block1')"
+                            class="bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-lg text-xs font-bold transition">＋
+                            행 추가</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-white/5 custom-scrollbar">
+                    <table class="w-full text-sm border-collapse" id="tableBlock1">
+                        <!-- Rendered by JS -->
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Structure Manager Modal -->
+    <div id="structureModal"
+        class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] backdrop-blur-sm">
+        <div
+            class="bg-card glass-panel p-6 rounded-2xl w-[90%] max-w-[600px] shadow-2xl border border-white/10 max-h-[90vh] flex flex-col">
+            <h3 id="structureModalTitle" class="text-xl font-bold mb-4 text-white">표 구조 및 색상 관리</h3>
+
+            <div class="flex gap-6 overflow-hidden flex-1 flex-col md:flex-row">
+                <!-- Row Management -->
+                <div class="flex-1 flex flex-col min-h-0">
+                    <h4 class="text-sm font-bold text-blue-400 mb-2 px-1">행(Row) 관리</h4>
+                    <div id="rowManagerList"
+                        class="flex-1 overflow-y-auto space-y-2 border border-white/5 rounded-lg p-2 bg-black/20 custom-scrollbar">
+                    </div>
+                </div>
+                <!-- Col Management -->
+                <div class="flex-1 flex flex-col min-h-0">
+                    <h4 class="text-sm font-bold text-purple-400 mb-2 px-1">열(Column) 관리</h4>
+                    <div id="colManagerList"
+                        class="flex-1 overflow-y-auto space-y-2 border border-white/5 rounded-lg p-2 bg-black/20 custom-scrollbar">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end mt-6">
+                <button onclick="closeStructureManager()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl font-bold transition shadow-lg shadow-blue-500/20">완료</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="management.js"></script>
+</body>
+
+</html>
