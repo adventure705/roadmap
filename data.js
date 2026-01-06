@@ -56,25 +56,32 @@ let roadmapData = {
         settlement: ['현대카드', '삼성카드']
     },
     commonMemos: { fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [] },
+    categoryOperators: {},
+    categoryColors: {},
+    businessNames: [],
     investment: {
         subtitle: "자유로운 형식으로 투자 내역과 수입을 관리하세요.",
-        block1: { title: "투자 현황 (일반)", corner: "", rows: ["매출", "영업이익"], cols: ["2026", "2027"], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [], headerHeight: 0 },
+        block1: { title: "투자 현황 (일반)", corner: "", rows: [], cols: [], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [], headerHeight: 0 },
         block2Title: "투자자별 내역",
-        investors: [
-            { id: 1, name: "기본 투자자", block2: { title: "투자자별 내역", corner: "", rows: ["지분율", "배당금"], cols: ["2026", "2027"], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [], headerHeight: 0 } }
-        ],
-        selectedInvestorId: 1
+        investors: []
+    },
+    management: {
+        block1: { title: "정보 관리 리스트", rows: ["계좌 1", "카드 1"], cols: ["구분", "번호/내용", "메모"], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [] }
     },
     moneyPlan: {
+        title: "Money Plan 💰",
+        subtitle: "연간 주요 일정 및 지출 계획을 관리하세요.",
         birthdays: [
             { name: "아버지", lunarType: "음력", lunarDate: "3월 6일", solarType: "양력", solarDate: "4월 24일" },
             { name: "이모", lunarType: "음력", lunarDate: "9월 17일", solarType: "양력", solarDate: "10월 31일" },
             { name: "어머니", lunarType: "음력", lunarDate: "11월 8일", solarType: "양력", solarDate: "12월 18일" }
         ],
         categories: ["생일", "명절", "경조금", "세금", "병원", "기타"],
-        title: "Money Plan 💰",
-        subtitle: "연간 주요 일정 및 지출 계획을 관리하세요."
-    }
+        plan: { reserve: {}, monthly: {} },
+        details: { monthly: {} },
+        settlement: { monthly: {} }
+    },
+    updatedAt: 0
 };
 
 let currentYear = 2026;
@@ -233,18 +240,18 @@ function syncMemoryToCloud() {
     isSyncing = true;
 
     const dataToSave = {
-        years: roadmapData.years,
-        categories: roadmapData.categories,
-        bankAccounts: roadmapData.bankAccounts,
-        cards: roadmapData.cards,
-        commonMemos: roadmapData.commonMemos,
-        categoryOperators: roadmapData.categoryOperators,
-        categoryColors: roadmapData.categoryColors,
-        businessNames: roadmapData.businessNames,
-        investment: roadmapData.investment,
-        management: roadmapData.management,
-        moneyPlan: roadmapData.moneyPlan,
-        updatedAt: roadmapData.updatedAt
+        years: roadmapData.years || {},
+        categories: roadmapData.categories || {},
+        bankAccounts: roadmapData.bankAccounts || {},
+        cards: roadmapData.cards || {},
+        commonMemos: roadmapData.commonMemos || {},
+        categoryOperators: roadmapData.categoryOperators || {},
+        categoryColors: roadmapData.categoryColors || {},
+        businessNames: roadmapData.businessNames || [],
+        investment: roadmapData.investment || {},
+        management: roadmapData.management || {},
+        moneyPlan: roadmapData.moneyPlan || {},
+        updatedAt: roadmapData.updatedAt || 0
     };
 
     db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave)
@@ -282,6 +289,12 @@ function mergeCloudData(cloudData) {
     if (cloudData.management) roadmapData.management = cloudData.management;
     if (cloudData.moneyPlan) roadmapData.moneyPlan = cloudData.moneyPlan;
     roadmapData.updatedAt = cloudData.updatedAt || 0;
+
+    // Ensure no properties are undefined
+    if (!roadmapData.categoryOperators) roadmapData.categoryOperators = {};
+    if (!roadmapData.categoryColors) roadmapData.categoryColors = {};
+    if (!roadmapData.businessNames) roadmapData.businessNames = [];
+    if (!roadmapData.management) roadmapData.management = { block1: { title: "정보 관리 리스트", rows: [], cols: [], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [] } };
 
     localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
     console.log("✅ Memory updated from Firestore");
