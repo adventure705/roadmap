@@ -146,16 +146,9 @@ function renderSidebar(activePage) {
         if (item.type === 'header') {
             menuHTML += `<div class="pt-4 pb-1 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">${item.label}</div>`;
         } else {
-            let label = item.label;
-            if (item.id === 'secret_board') {
-                try {
-                    const sbTitle = roadmapData?.years?.[typeof currentYear !== 'undefined' ? currentYear : 2026]?.secretBoard?.pageTitle;
-                    if (sbTitle) label = sbTitle;
-                } catch (e) { }
-            }
             const isActive = activePage === item.id;
             menuHTML += `<a href="${item.link}" class="sidebar-link ${isActive ? 'active' : ''} w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-sm font-medium text-gray-400 focus:outline-none">
-                <span class="w-5 text-center">${item.icon}</span> ${label}
+                <span class="w-5 text-center">${item.icon}</span> ${item.label}
             </a>`;
         }
     });

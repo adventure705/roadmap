@@ -146,8 +146,6 @@ function updatePageTitle(val) {
     const sb = roadmapData.years[currentYear].secretBoard;
     sb.pageTitle = val;
     saveData();
-    // Refresh sidebar to reflect name change if needed
-    if (typeof renderSidebar === 'function') renderSidebar('secret_board');
 }
 
 
@@ -723,7 +721,7 @@ function checkLockStatus() {
     if (unlocked === 'true') {
         lockScreen.classList.add('hidden');
     } else {
-        lockScreen.classList.remove('hidden');
+        // lockScreen.classList.remove('hidden'); // Default is visible now
         // Always show login prompt since default exists
         msg.innerText = "접근하려면 비밀번호를 입력하세요.";
         msg.classList.remove('text-blue-400');
@@ -757,8 +755,9 @@ function updateUI() {
     renderSubtitle();
     renderMemos();
     renderAllBlocks();
-    if (typeof renderSidebar === 'function') renderSidebar('secret_board');
 }
 window.updateUI = updateUI;
 
+// Call checkLockStatus immediately to prevent flash
+document.addEventListener('DOMContentLoaded', checkLockStatus);
 window.addEventListener('load', initSecretBoard);
