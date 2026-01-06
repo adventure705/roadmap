@@ -180,9 +180,32 @@ function loadData() {
                                 if (typeof updateSettlementUI === 'function') updateSettlementUI();
                                 if (typeof renderMoneyPlanUI === 'function') renderMoneyPlanUI();
                             } else {
-                                if (localStorage.getItem('supermoon_data')) {
-                                    console.log("Migrating local to Firestore...");
-                                    docRef.set(JSON.parse(localStorage.getItem('supermoon_data')));
+                                // 문서가 존재하지 않으면 초기 데이터 생성
+                                console.log("📝 Firestore 문서가 없습니다. 초기 데이터를 생성합니다...");
+                                const localData = localStorage.getItem('supermoon_data');
+
+                                if (localData) {
+                                    // 로컬 스토리지에 데이터가 있으면 마이그레이션
+                                    console.log("Migrating local data to Firestore...");
+                                    docRef.set(JSON.parse(localData));
+                                } else {
+                                    // 로컬 데이터도 없으면 기본 데이터 생성
+                                    console.log("Creating default data in Firestore...");
+                                    const defaultData = {
+                                        years: roadmapData.years,
+                                        categories: roadmapData.categories,
+                                        bankAccounts: roadmapData.bankAccounts,
+                                        cards: roadmapData.cards,
+                                        commonMemos: roadmapData.commonMemos,
+                                        categoryOperators: roadmapData.categoryOperators || {},
+                                        categoryColors: roadmapData.categoryColors || {},
+                                        businessNames: roadmapData.businessNames || [],
+                                        investment: roadmapData.investment,
+                                        management: roadmapData.management || {},
+                                        moneyPlan: roadmapData.moneyPlan
+                                    };
+                                    docRef.set(defaultData);
+                                    localStorage.setItem('supermoon_data', JSON.stringify(defaultData));
                                 }
                             }
                         }
