@@ -1,4 +1,4 @@
-const roadmapData = {
+let roadmapData = {
     createYearData: () => ({
         variableIncome: new Array(12).fill(0),
         fixedIncome: new Array(12).fill(0),
@@ -142,6 +142,7 @@ function loadData() {
                                 cards: roadmapData.cards,
                                 commonMemos: roadmapData.commonMemos,
                                 categoryOperators: roadmapData.categoryOperators,
+                                categoryColors: roadmapData.categoryColors,
                                 businessNames: roadmapData.businessNames,
                                 investment: roadmapData.investment,
                                 management: roadmapData.management,
@@ -155,13 +156,29 @@ function loadData() {
                         } else {
                             if (doc.exists) {
                                 const cloudData = doc.data();
-                                roadmapData = cloudData;
-                                localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
-                                console.log("Synced from Firestore");
 
+                                // Merge cloud data into roadmapData
+                                if (cloudData.years) roadmapData.years = cloudData.years;
+                                if (cloudData.categories) roadmapData.categories = cloudData.categories;
+                                if (cloudData.bankAccounts) roadmapData.bankAccounts = cloudData.bankAccounts;
+                                if (cloudData.cards) roadmapData.cards = cloudData.cards;
+                                if (cloudData.commonMemos) roadmapData.commonMemos = cloudData.commonMemos;
+                                if (cloudData.categoryOperators) roadmapData.categoryOperators = cloudData.categoryOperators;
+                                if (cloudData.categoryColors) roadmapData.categoryColors = cloudData.categoryColors;
+                                if (cloudData.businessNames) roadmapData.businessNames = cloudData.businessNames;
+                                if (cloudData.investment) roadmapData.investment = cloudData.investment;
+                                if (cloudData.management) roadmapData.management = cloudData.management;
+                                if (cloudData.moneyPlan) roadmapData.moneyPlan = cloudData.moneyPlan;
+
+                                localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
+                                console.log("✅ Real-time sync: Data updated from Firestore");
+
+                                // Update UI to reflect changes from other devices
                                 if (typeof renderAllBlocks === 'function') renderAllBlocks();
                                 if (typeof updateUI === 'function') updateUI();
                                 if (typeof renderSidebar === 'function') renderSidebar(window.currentPageType);
+                                if (typeof updateSettlementUI === 'function') updateSettlementUI();
+                                if (typeof renderMoneyPlanUI === 'function') renderMoneyPlanUI();
                             } else {
                                 if (localStorage.getItem('supermoon_data')) {
                                     console.log("Migrating local to Firestore...");
@@ -195,6 +212,7 @@ function saveData() {
             cards: roadmapData.cards,
             commonMemos: roadmapData.commonMemos,
             categoryOperators: roadmapData.categoryOperators,
+            categoryColors: roadmapData.categoryColors,
             businessNames: roadmapData.businessNames,
             investment: roadmapData.investment,
             management: roadmapData.management,
