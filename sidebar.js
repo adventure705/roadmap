@@ -90,21 +90,40 @@ window.closeSidebarManager = function () {
     if (modal) modal.style.display = 'none';
 };
 
-window.moveSidebarItem = function (index, direction) {
-    const config = getMenuConfig();
-    if (direction === -1 && index > 0) {
-        [config[index], config[index - 1]] = [config[index - 1], config[index]];
-    } else if (direction === 1 && index < config.length - 1) {
-        [config[index], config[index + 1]] = [config[index + 1], config[index]];
-    }
-    localStorage.setItem('sidebar_config', JSON.stringify(config));
-    renderSidebarManagerList();
-};
-
 window.updateSidebarItemName = function (index, newName) {
     const config = getMenuConfig();
     config[index].label = newName;
     localStorage.setItem('sidebar_config', JSON.stringify(config));
+};
+
+let sidebarDragSourceIdx = null;
+
+window.handleSidebarDragStart = function (e, idx) {
+    sidebarDragSourceIdx = idx;
+    e.dataTransfer.effectAllowed = 'move';
+    e.target.style.opacity = '0.5';
+};
+
+window.handleSidebarDragOver = function (e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+};
+
+window.handleSidebarDrop = function (e, targetIdx) {
+    e.preventDefault();
+    if (sidebarDragSourceIdx === null || sidebarDragSourceIdx === targetIdx) return;
+
+    const config = getMenuConfig();
+    const [movedItem] = config.splice(sidebarDragSourceIdx, 1);
+    config.splice(targetIdx, 0, movedItem);
+
+    localStorage.setItem('sidebar_config', JSON.stringify(config));
+    renderSidebarManagerList();
+    sidebarDragSourceIdx = null;
+};
+
+window.handleSidebarDragEnd = function (e) {
+    e.target.style.opacity = '1';
 };
 
 function renderSidebarManagerList() {
@@ -112,14 +131,17 @@ function renderSidebarManagerList() {
     const config = getMenuConfig();
     let html = '';
     config.forEach((item, idx) => {
-        html += `<div class="flex items-center bg-gray-700 p-2 rounded mb-2 gap-2">`;
-        if (item.type === 'header') html += `<span class="text-xs font-bold text-gray-400 w-6 text-center">HEAD</span>`;
-        else html += `<span class="text-xl w-6 text-center">${item.icon}</span>`;
+        html += `<div draggable="true" 
+                      ondragstart="window.handleSidebarDragStart(event, ${idx})"
+                      ondragover="window.handleSidebarDragOver(event)"
+                      ondrop="window.handleSidebarDrop(event, ${idx})"
+                      ondragend="window.handleSidebarDragEnd(event)"
+                      class="flex items-center bg-gray-700 p-2 rounded mb-2 gap-2 cursor-move hover:bg-gray-600 transition group">`;
+        if (item.type === 'header') html += `<span class="text-xs font-bold text-gray-400 w-6 text-center select-none">HEAD</span>`;
+        else html += `<span class="text-xl w-6 text-center select-none">${item.icon}</span>`;
         html += `<input type="text" class="flex-1 bg-gray-800 border border-gray-600 text-white text-sm rounded px-2 py-1" value="${item.label}" onblur="updateSidebarItemName(${idx}, this.value)">`;
-        html += `<div class="flex gap-1">
-            <button onclick="moveSidebarItem(${idx}, -1)" class="text-gray-400 hover:text-white p-1">▲</button>
-            <button onclick="moveSidebarItem(${idx}, 1)" class="text-gray-400 hover:text-white p-1">▼</button>
-        </div></div>`;
+        html += `<span class="text-gray-500 text-lg px-2 select-none group-hover:text-white transition">≡</span>`;
+        html += `</div>`;
     });
     listEl.innerHTML = html;
 }

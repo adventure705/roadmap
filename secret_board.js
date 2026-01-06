@@ -139,7 +139,10 @@ function renderTitles() {
     setVal('titleAssetDetails2', sb.assetDetails2.title || "📊 자산 상세 내역 2");
 
     const pageTitleInput = document.getElementById('pageTitle');
-    if (pageTitleInput) pageTitleInput.value = sb.pageTitle || "시크릿 보드 🚩";
+    if (pageTitleInput) {
+        pageTitleInput.value = sb.pageTitle || "시크릿 보드 🚩";
+        pageTitleInput.classList.remove('opacity-0');
+    }
 }
 
 function updatePageTitle(val) {
