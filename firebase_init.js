@@ -2,12 +2,12 @@
     try {
         // Firebase 설정을 직접 포함 (firebase-config.json이 gitignore되어 있어서)
         const config = {
-            apiKey: "AIzaSyDlGPmUwJf7qVmT5eWGNKxGBJPvLqRRwGI",
-            authDomain: "roadmap-d4d6a.firebaseapp.com",
-            projectId: "roadmap-d4d6a",
-            storageBucket: "roadmap-d4d6a.firebasestorage.app",
-            messagingSenderId: "1031959746865",
-            appId: "1:1031959746865:web:9a5b0c0e9f9e9e9e9e9e9e"
+            apiKey: "AIzaSyDdk_axp2Q9OANqleknWeYWK9DrxKWKeY4",
+            authDomain: "template-3530f.firebaseapp.com",
+            projectId: "template-3530f",
+            storageBucket: "template-3530f.firebasestorage.app",
+            messagingSenderId: "891098188622",
+            appId: "1:891098188622:web:392c0121a17f1cd4402c1f"
         };
 
         if (typeof firebase !== 'undefined') {
