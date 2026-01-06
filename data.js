@@ -80,163 +80,71 @@ const roadmapData = {
 let currentYear = 2026;
 let currentMonth = 0; // 0 = Jan
 
+const FIXED_DOC_ID = 'main_roadmap_data'; // Shared document ID for all visitors
+
 function loadData() {
     try {
-        if (typeof localStorage === 'undefined') return;
-        const saved = localStorage.getItem('supermoon_data');
-        if (saved) {
-            const parsed = JSON.parse(saved);
+        // 1. Load Local Data (Fast Init)
+        if (typeof localStorage !== 'undefined') {
+            const saved = localStorage.getItem('supermoon_data');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // ... (Existing Migration Logic - Keeping it compact by calling a helper or inserting it)
+                // reusing internal parsing logic is hard if I replace the function.
+                // I will include the full existing parsing logic here to be safe.
+                processParsedData(parsed);
+            } else {
+                if (!roadmapData.businessNames) roadmapData.businessNames = [];
+            }
+        }
 
-            // Check if it's the new format (has 'years' property) or old format
-            let yearsData;
-            if (parsed.years) {
-                yearsData = parsed.years;
+        // 2. Initialize Firestore Sync (If available)
+        if (typeof firebase !== 'undefined') {
+            const auth = firebase.auth();
+            const db = firebase.firestore();
 
-                // Migrate Categories
-                if (parsed.categories) {
-                    if (Array.isArray(parsed.categories)) {
-                        const shared = parsed.categories;
-                        roadmapData.categories = {
-                            fixed: [...shared], variable: [...shared], income: [...shared], cash: [...shared], installment: [...shared],
-                            settlement: ['식자재', '배달', '외식', '대중교통', '택시', '물품구입비', '자기계발비', '꾸밈비', '의료건강비', '사회생활비', '문화생활비', '경조사', '예비비']
-                        };
-                    } else {
-                        roadmapData.categories = parsed.categories;
-                        if (!roadmapData.categories.settlement) {
-                            roadmapData.categories.settlement = ['식자재', '배달', '외식', '대중교통', '택시', '물품구입비', '자기계발비', '꾸밈비', '의료건강비', '사회생활비', '문화생활비', '경조사', '예비비'];
+            auth.signInAnonymously().catch(console.error);
+
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    const docRef = db.collection('roadmap').doc(FIXED_DOC_ID);
+
+                    // Realtime Sync
+                    docRef.onSnapshot(doc => {
+                        if (doc.exists) {
+                            const cloudData = doc.data();
+                            // Update Memory
+                            roadmapData = cloudData;
+                            // Update LocalStorage to match Cloud
+                            localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
+                            console.log("Data synced from Firestore");
+
+                            // Trigger UI Update
+                            if (typeof renderAllBlocks === 'function') renderAllBlocks();
+                            if (typeof updateUI === 'function') updateUI();
+                            if (typeof renderSidebar === 'function') renderSidebar(window.currentPageType);
+                        } else {
+                            // Migration: Cloud is empty, upload local data
+                            if (localStorage.getItem('supermoon_data')) {
+                                console.log("Migrating local data to Firestore...");
+                                docRef.set(JSON.parse(localStorage.getItem('supermoon_data')));
+                            }
                         }
-                    }
-                }
-
-                // Migrate Bank Accounts
-                if (parsed.bankAccounts) {
-                    if (Array.isArray(parsed.bankAccounts)) {
-                        const shared = parsed.bankAccounts;
-                        roadmapData.bankAccounts = {
-                            fixed: [...shared], variable: [...shared], income: [...shared], cash: [...shared], installment: [...shared]
-                        };
-                    } else {
-                        roadmapData.bankAccounts = parsed.bankAccounts;
-                        if (!roadmapData.bankAccounts.settlement) roadmapData.bankAccounts.settlement = [];
-                    }
-                }
-
-                // Migrate Cards
-                if (parsed.cards) {
-                    if (Array.isArray(parsed.cards)) {
-                        const shared = parsed.cards;
-                        roadmapData.cards = {
-                            fixed: [...shared], variable: [...shared], income: [...shared], cash: [...shared], installment: [...shared],
-                            business: []
-                        };
-                    } else {
-                        roadmapData.cards = parsed.cards;
-                        if (!roadmapData.cards.settlement) roadmapData.cards.settlement = [];
-                        if (!roadmapData.cards.business) roadmapData.cards.business = [];
-                    }
-                }
-
-                if (parsed.commonMemos) roadmapData.commonMemos = parsed.commonMemos;
-                if (parsed.categoryOperators) roadmapData.categoryOperators = parsed.categoryOperators;
-                if (parsed.businessNames) roadmapData.businessNames = parsed.businessNames;
-                else roadmapData.businessNames = []; // Initialize if missing
-
-                // Migrate Investment Data
-                if (parsed.investment) {
-                    roadmapData.investment = parsed.investment;
-                    // Compatibility check: ensure block1, block2Title and investors exist
-                    if (!roadmapData.investment.block1) roadmapData.investment.block1 = { title: "투자 현황 (일반)", corner: "", rows: [], cols: [], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [] };
-                    if (!roadmapData.investment.block1.title) roadmapData.investment.block1.title = "투자 현황 (일반)";
-                    if (!roadmapData.investment.block1.corner) roadmapData.investment.block1.corner = "";
-                    if (!roadmapData.investment.block1.rowColors) roadmapData.investment.block1.rowColors = [];
-                    if (!roadmapData.investment.block1.colColors) roadmapData.investment.block1.colColors = [];
-                    if (!roadmapData.investment.block1.rowHeights) roadmapData.investment.block1.rowHeights = [];
-                    if (!roadmapData.investment.block1.colWidths) roadmapData.investment.block1.colWidths = [];
-                    if (!roadmapData.investment.block1.headerHeight) roadmapData.investment.block1.headerHeight = 0;
-
-                    if (!roadmapData.investment.block2Title) roadmapData.investment.block2Title = "투자자별 내역";
-                    if (!roadmapData.investment.subtitle) roadmapData.investment.subtitle = "자유로운 형식으로 투자 내역과 수입을 관리하세요.";
-                    if (!roadmapData.investment.investors) roadmapData.investment.investors = [];
-
-                    roadmapData.investment.investors.forEach(inv => {
-                        if (!inv.block2.title) inv.block2.title = "투자자별 내역";
-                        if (!inv.block2.corner) inv.block2.corner = "";
-                        if (!inv.block2.rowColors) inv.block2.rowColors = [];
-                        if (!inv.block2.colColors) inv.block2.colColors = [];
-                        if (!inv.block2.rowHeights) inv.block2.rowHeights = [];
-                        if (!inv.block2.colWidths) inv.block2.colWidths = [];
-                        if (!inv.block2.headerHeight) inv.block2.headerHeight = 0;
                     });
                 }
-
-                // Migrate Money Plan Data
-                if (parsed.moneyPlan) {
-                    roadmapData.moneyPlan = parsed.moneyPlan;
-                    if (!roadmapData.moneyPlan.birthdays) {
-                        roadmapData.moneyPlan.birthdays = [
-                            { name: "아버지", lunarType: "음력", lunarDate: "3월 6일", solarType: "양력", solarDate: "4월 24일" },
-                            { name: "이모", lunarType: "음력", lunarDate: "9월 17일", solarType: "양력", solarDate: "10월 31일" },
-                            { name: "어머니", lunarType: "음력", lunarDate: "11월 8일", solarType: "양력", solarDate: "12월 18일" }
-                        ];
-                    }
-                    if (!roadmapData.moneyPlan.categories) {
-                        roadmapData.moneyPlan.categories = ["생일", "명절", "경조금", "세금", "병원", "기타"];
-                    }
-                    if (!roadmapData.moneyPlan.title) roadmapData.moneyPlan.title = "Money Plan 💰";
-                    if (!roadmapData.moneyPlan.subtitle) roadmapData.moneyPlan.subtitle = "연간 주요 일정 및 지출 계획을 관리하세요.";
-                }
-
-                // Migrate Management Data
-                if (parsed.management) {
-                    roadmapData.management = parsed.management;
-                    if (!roadmapData.management.block1) {
-                        roadmapData.management.block1 = { title: "정보 관리 리스트", rows: ["계좌 1", "카드 1"], cols: ["구분", "번호/내용", "메모"], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [] };
-                    }
-                    if (!roadmapData.management.block1.rowColors) roadmapData.management.block1.rowColors = [];
-                    if (!roadmapData.management.block1.colColors) roadmapData.management.block1.colColors = [];
-                    if (!roadmapData.management.block1.rowHeights) roadmapData.management.block1.rowHeights = [];
-                    if (!roadmapData.management.block1.colWidths) roadmapData.management.block1.colWidths = [];
-                }
-            } else {
-                // Old format: parsed IS the years object
-                yearsData = parsed;
-                roadmapData.businessNames = []; // Initialize for old format
-            }
-
-            // Validation & Migration
-            if (yearsData[2026]) {
-                for (const y in yearsData) {
-                    // Ensure details exist
-                    if (!yearsData[y].details) {
-                        yearsData[y].details = { income: [], fixed: [], variable: [], installment: [], cash: [], settlement: [], business: [] };
-                    }
-                    if (!yearsData[y].details.settlement) yearsData[y].details.settlement = [];
-                    if (!yearsData[y].details.business) yearsData[y].details.business = []; // Ensure business exists
-
-                    // Ensure monthlyMemos exist
-                    if (!yearsData[y].monthlyMemos) {
-                        yearsData[y].monthlyMemos = Array.from({ length: 12 }, () => ({
-                            fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: []
-                        }));
-                    } else {
-                        // Check inner keys of existing memos
-                        yearsData[y].monthlyMemos.forEach(m => {
-                            if (!m.settlement) m.settlement = [];
-                            if (!m.business) m.business = [];
-                        });
-                    }
-                }
-                roadmapData.years = yearsData;
-            }
-        } else {
-            // No saved data found, initialize defaults
-            if (!roadmapData.businessNames) roadmapData.businessNames = [];
+            });
         }
     } catch (e) {
         console.error('Storage error:', e);
-        if (!roadmapData.businessNames) roadmapData.businessNames = []; // Fallback safety
+        if (!roadmapData.businessNames) roadmapData.businessNames = [];
     }
 }
+
+// Helper to reuse the logic from original loadData without re-typing it all if possible, 
+// but since I'm rewriting loadData, I must include the parsing logic. 
+// For brevity in this tool call, I will assume 'processParsedData' is not defined and I will paste the original logic inside loadData, 
+// adapted slightly to be cleaner.
+// Actually, the original logic is long. I'll paste it fully.
 
 function saveData() {
     try {
@@ -246,14 +154,166 @@ function saveData() {
             bankAccounts: roadmapData.bankAccounts,
             cards: roadmapData.cards,
             commonMemos: roadmapData.commonMemos,
-            categoryOperators: roadmapData.categoryOperators, // Persist Operators
-            businessNames: roadmapData.businessNames, // Persist Business Names
-            investment: roadmapData.investment, // Persist Investment Data
-            management: roadmapData.management,  // Persist Management Data
-            moneyPlan: roadmapData.moneyPlan    // Persist Money Plan Data
+            categoryOperators: roadmapData.categoryOperators,
+            businessNames: roadmapData.businessNames,
+            investment: roadmapData.investment,
+            management: roadmapData.management,
+            moneyPlan: roadmapData.moneyPlan
         };
+        // Local Save
         localStorage.setItem('supermoon_data', JSON.stringify(dataToSave));
+
+        // Cloud Save
+        if (typeof firebase !== 'undefined') {
+            const db = firebase.firestore();
+            // Debounce or just save? Realtime saves might be frequent.
+            db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave).catch(console.error);
+        }
     } catch (e) { }
+}
+
+function processParsedData(parsed) {
+    // Check if it's the new format (has 'years' property) or old format
+    let yearsData;
+    if (parsed.years) {
+        yearsData = parsed.years;
+
+        // Migrate Categories
+        if (parsed.categories) {
+            if (Array.isArray(parsed.categories)) {
+                const shared = parsed.categories;
+                roadmapData.categories = {
+                    fixed: [...shared], variable: [...shared], income: [...shared], cash: [...shared], installment: [...shared],
+                    settlement: ['식자재', '배달', '외식', '대중교통', '택시', '물품구입비', '자기계발비', '꾸밈비', '의료건강비', '사회생활비', '문화생활비', '경조사', '예비비']
+                };
+            } else {
+                roadmapData.categories = parsed.categories;
+                if (!roadmapData.categories.settlement) {
+                    roadmapData.categories.settlement = ['식자재', '배달', '외식', '대중교통', '택시', '물품구입비', '자기계발비', '꾸밈비', '의료건강비', '사회생활비', '문화생활비', '경조사', '예비비'];
+                }
+            }
+        }
+
+        // Migrate Bank Accounts
+        if (parsed.bankAccounts) {
+            if (Array.isArray(parsed.bankAccounts)) {
+                const shared = parsed.bankAccounts;
+                roadmapData.bankAccounts = {
+                    fixed: [...shared], variable: [...shared], income: [...shared], cash: [...shared], installment: [...shared]
+                };
+            } else {
+                roadmapData.bankAccounts = parsed.bankAccounts;
+                if (!roadmapData.bankAccounts.settlement) roadmapData.bankAccounts.settlement = [];
+            }
+        }
+
+        // Migrate Cards
+        if (parsed.cards) {
+            if (Array.isArray(parsed.cards)) {
+                const shared = parsed.cards;
+                roadmapData.cards = {
+                    fixed: [...shared], variable: [...shared], income: [...shared], cash: [...shared], installment: [...shared],
+                    business: []
+                };
+            } else {
+                roadmapData.cards = parsed.cards;
+                if (!roadmapData.cards.settlement) roadmapData.cards.settlement = [];
+                if (!roadmapData.cards.business) roadmapData.cards.business = [];
+            }
+        }
+
+        if (parsed.commonMemos) roadmapData.commonMemos = parsed.commonMemos;
+        if (parsed.categoryOperators) roadmapData.categoryOperators = parsed.categoryOperators;
+        if (parsed.businessNames) roadmapData.businessNames = parsed.businessNames;
+        else roadmapData.businessNames = []; // Initialize if missing
+
+        // Migrate Investment Data
+        if (parsed.investment) {
+            roadmapData.investment = parsed.investment;
+            // Compatibility check: ensure block1, block2Title and investors exist
+            if (!roadmapData.investment.block1) roadmapData.investment.block1 = { title: "투자 현황 (일반)", corner: "", rows: [], cols: [], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [] };
+            if (!roadmapData.investment.block1.title) roadmapData.investment.block1.title = "투자 현황 (일반)";
+            if (!roadmapData.investment.block1.corner) roadmapData.investment.block1.corner = "";
+            if (!roadmapData.investment.block1.rowColors) roadmapData.investment.block1.rowColors = [];
+            if (!roadmapData.investment.block1.colColors) roadmapData.investment.block1.colColors = [];
+            if (!roadmapData.investment.block1.rowHeights) roadmapData.investment.block1.rowHeights = [];
+            if (!roadmapData.investment.block1.colWidths) roadmapData.investment.block1.colWidths = [];
+            if (!roadmapData.investment.block1.headerHeight) roadmapData.investment.block1.headerHeight = 0;
+
+            if (!roadmapData.investment.block2Title) roadmapData.investment.block2Title = "투자자별 내역";
+            if (!roadmapData.investment.subtitle) roadmapData.investment.subtitle = "자유로운 형식으로 투자 내역과 수입을 관리하세요.";
+            if (!roadmapData.investment.investors) roadmapData.investment.investors = [];
+
+            roadmapData.investment.investors.forEach(inv => {
+                if (!inv.block2.title) inv.block2.title = "투자자별 내역";
+                if (!inv.block2.corner) inv.block2.corner = "";
+                if (!inv.block2.rowColors) inv.block2.rowColors = [];
+                if (!inv.block2.colColors) inv.block2.colColors = [];
+                if (!inv.block2.rowHeights) inv.block2.rowHeights = [];
+                if (!inv.block2.colWidths) inv.block2.colWidths = [];
+                if (!inv.block2.headerHeight) inv.block2.headerHeight = 0;
+            });
+        }
+
+        // Migrate Money Plan Data
+        if (parsed.moneyPlan) {
+            roadmapData.moneyPlan = parsed.moneyPlan;
+            if (!roadmapData.moneyPlan.birthdays) {
+                roadmapData.moneyPlan.birthdays = [
+                    { name: "아버지", lunarType: "음력", lunarDate: "3월 6일", solarType: "양력", solarDate: "4월 24일" },
+                    { name: "이모", lunarType: "음력", lunarDate: "9월 17일", solarType: "양력", solarDate: "10월 31일" },
+                    { name: "어머니", lunarType: "음력", lunarDate: "11월 8일", solarType: "양력", solarDate: "12월 18일" }
+                ];
+            }
+            if (!roadmapData.moneyPlan.categories) {
+                roadmapData.moneyPlan.categories = ["생일", "명절", "경조금", "세금", "병원", "기타"];
+            }
+            if (!roadmapData.moneyPlan.title) roadmapData.moneyPlan.title = "Money Plan 💰";
+            if (!roadmapData.moneyPlan.subtitle) roadmapData.moneyPlan.subtitle = "연간 주요 일정 및 지출 계획을 관리하세요.";
+        }
+
+        // Migrate Management Data
+        if (parsed.management) {
+            roadmapData.management = parsed.management;
+            if (!roadmapData.management.block1) {
+                roadmapData.management.block1 = { title: "정보 관리 리스트", rows: ["계좌 1", "카드 1"], cols: ["구분", "번호/내용", "메모"], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [] };
+            }
+            if (!roadmapData.management.block1.rowColors) roadmapData.management.block1.rowColors = [];
+            if (!roadmapData.management.block1.colColors) roadmapData.management.block1.colColors = [];
+            if (!roadmapData.management.block1.rowHeights) roadmapData.management.block1.rowHeights = [];
+            if (!roadmapData.management.block1.colWidths) roadmapData.management.block1.colWidths = [];
+        }
+    } else {
+        // Old format: parsed IS the years object
+        yearsData = parsed;
+        roadmapData.businessNames = []; // Initialize for old format
+    }
+
+    // Validation & Migration
+    if (yearsData[2026]) {
+        for (const y in yearsData) {
+            // Ensure details exist
+            if (!yearsData[y].details) {
+                yearsData[y].details = { income: [], fixed: [], variable: [], installment: [], cash: [], settlement: [], business: [] };
+            }
+            if (!yearsData[y].details.settlement) yearsData[y].details.settlement = [];
+            if (!yearsData[y].details.business) yearsData[y].details.business = []; // Ensure business exists
+
+            // Ensure monthlyMemos exist
+            if (!yearsData[y].monthlyMemos) {
+                yearsData[y].monthlyMemos = Array.from({ length: 12 }, () => ({
+                    fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: []
+                }));
+            } else {
+                // Check inner keys of existing memos
+                yearsData[y].monthlyMemos.forEach(m => {
+                    if (!m.settlement) m.settlement = [];
+                    if (!m.business) m.business = [];
+                });
+            }
+        }
+        roadmapData.years = yearsData;
+    }
 }
 
 // Override createYearData to include monthlyMemos
