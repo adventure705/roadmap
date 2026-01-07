@@ -369,6 +369,7 @@ function processParsedData(parsed) {
 
         if (parsed.commonMemos) roadmapData.commonMemos = parsed.commonMemos;
         if (parsed.categoryOperators) roadmapData.categoryOperators = parsed.categoryOperators;
+        if (parsed.categoryColors) roadmapData.categoryColors = parsed.categoryColors;
         if (parsed.businessNames) roadmapData.businessNames = parsed.businessNames;
         else roadmapData.businessNames = []; // Initialize if missing
 
