@@ -24,6 +24,7 @@ function updateSettlementUI() {
     } else {
         renderSettlementWeekly();
     }
+    renderMemos();
 }
 
 function toggleSettlementView(mode) {

@@ -14,8 +14,14 @@ let roadmapData = {
             fixed: [],       // { id, name, values: [12] }
             variable: [],    // { id, name, values: [12] }
             installment: [], // { id, name, values: [12] }
-            cash: []         // { id, name, values: [12] }
-        }
+            cash: [],        // { id, name, values: [12] }
+            settlement: [],
+            business: []
+        },
+        monthlyMemos: Array.from({ length: 12 }, () => ({
+            fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: [],
+            investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
+        }))
     }),
     years: {
         2026: {
@@ -27,7 +33,11 @@ let roadmapData = {
                 fixedIncome: new Array(12).fill(0),
                 expenses: new Array(12).fill(0)
             },
-            details: { income: [], fixed: [], variable: [], installment: [], cash: [] }
+            details: { income: [], fixed: [], variable: [], installment: [], cash: [], settlement: [], business: [] },
+            monthlyMemos: Array.from({ length: 12 }, () => ({
+                fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: [],
+                investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
+            }))
         }
     },
     months: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
