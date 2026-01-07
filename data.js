@@ -321,8 +321,17 @@ function processParsedData(parsed) {
     else roadmapData.updatedAt = 0;
 
     if (parsed.dashboardSubtitle) roadmapData.dashboardSubtitle = parsed.dashboardSubtitle;
+    if (parsed.pageTitles) roadmapData.pageTitles = parsed.pageTitles;
+    else roadmapData.pageTitles = {};
+
     if (parsed.sidebarConfig) roadmapData.sidebarConfig = parsed.sidebarConfig;
-    else roadmapData.sidebarConfig = null;
+    else {
+        // Fallback to legacy sidebar_config if missing in supermoon_data
+        const legacy = localStorage.getItem('sidebar_config');
+        if (legacy) {
+            try { roadmapData.sidebarConfig = JSON.parse(legacy); } catch (e) { }
+        }
+    }
 
     // Check if it's the new format (has 'years' property) or old format
     let yearsData;

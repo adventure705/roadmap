@@ -57,6 +57,12 @@ function getMenuConfig() {
                 config.push({ type: 'header', label: '정보 관리' });
                 config.push({ type: 'item', id: 'management', label: '정보 관리', icon: '📋', link: 'management.html' });
             }
+
+            // Sync back to roadmapData to prevent 'null' being saved to cloud later
+            if (typeof roadmapData !== 'undefined' && !roadmapData.sidebarConfig) {
+                roadmapData.sidebarConfig = config;
+            }
+
             return config;
         }
         return defaultMenuConfig;
