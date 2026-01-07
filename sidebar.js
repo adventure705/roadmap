@@ -374,7 +374,8 @@ window.renderMemos = function (containerId = 'memoContainer') {
 
     let html = '<div class="flex flex-col lg:flex-row gap-4 w-full">';
     // 1. Common Memo
-    const isFullWidthCommon = (currentPageType === 'secret_board');
+    const validMonthlyTabs = ['fixed', 'variable', 'income', 'cash', 'settlement', 'dashboard'];
+    const isFullWidthCommon = (currentPageType === 'secret_board' || !validMonthlyTabs.includes(currentPageType));
     html += `
     <div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 flex-1 min-w-0 ${isFullWidthCommon ? 'w-full' : 'lg:min-w-[300px]'}">
         <div class="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
@@ -403,7 +404,6 @@ window.renderMemos = function (containerId = 'memoContainer') {
 
     // 2. Monthly Memo
     // Allow monthly memos for specific tabs only
-    const validMonthlyTabs = ['fixed', 'variable', 'income', 'cash', 'installment', 'settlement', 'dashboard'];
     if (validMonthlyTabs.includes(currentPageType)) {
         const monthlyMemosMap = yearData.monthlyMemos || [];
         const memosForMonth = monthlyMemosMap[currentMonth] || {};
