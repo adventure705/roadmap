@@ -141,9 +141,7 @@
                         <button onclick="openCopyMonthModal()"
                             class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition mr-2">📋
                             데이터 복사</button>
-                        <button onclick="openCardManager()"
-                            class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition mr-2">💳
-                            카드 관리</button>
+
                         <button onclick="openBankManager()"
                             class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition mr-2">🏦
                             출금계좌 관리</button>
@@ -235,16 +233,18 @@
                         placeholder="예: 커피">
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">내용</label>
+                    <input type="text" id="addItemContent"
+                        class="w-full bg-gray-800 border border-gray-600 text-white text-sm rounded-lg p-2.5 focus:outline-none focus:border-blue-500"
+                        placeholder="상세 내용">
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-gray-400 mb-1">분류</label>
                     <select id="addItemCategory"
                         class="bg-gray-800 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"></select>
                 </div>
                 <!-- Card/Bank Optional for Cash but included for consistency -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-1">현금영수증 카드 (선택)</label>
-                    <select id="addItemCard"
-                        class="bg-gray-800 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"></select>
-                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-400 mb-1">출금계좌 (선택)</label>
                     <select id="addItemBank"

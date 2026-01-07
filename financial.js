@@ -425,6 +425,7 @@ function openAddItemModal(itemId = null) {
 
         // Reset Inputs
         document.getElementById('addItemName').value = '';
+        if (document.getElementById('addItemContent')) document.getElementById('addItemContent').value = '';
         document.getElementById('addItemAmount').value = '';
 
         // Date Input
@@ -437,7 +438,7 @@ function openAddItemModal(itemId = null) {
         // Card Input Visibility
         const cardSelect = document.getElementById('addItemCard');
         if (cardSelect && cardSelect.parentElement) {
-            cardSelect.parentElement.style.display = (currentPageType === 'income' || currentPageType === 'fixed' || currentPageType === 'variable') ? 'none' : 'block';
+            cardSelect.parentElement.style.display = (currentPageType === 'income' || currentPageType === 'fixed' || currentPageType === 'variable' || currentPageType === 'cash') ? 'none' : 'block';
         }
 
         // Bank Label
@@ -474,6 +475,9 @@ function openAddItemModal(itemId = null) {
 
             document.getElementById('addItemName').value = item.name;
             document.getElementById('addItemAmount').value = formatMoneyFull(item.values[currentMonth]); // Current month value
+            if (document.getElementById('addItemContent')) {
+                document.getElementById('addItemContent').value = item.content || '';
+            }
             if (catSelect) catSelect.value = item.category || '';
             if (bankSelect) bankSelect.value = item.bankAccount || '';
             if (cardSelect && currentPageType !== 'income') cardSelect.value = item.card || '';
@@ -486,7 +490,11 @@ function openAddItemModal(itemId = null) {
             // New Mode
             delete modal.dataset.editId;
             if (saveBtn) saveBtn.innerText = '저장';
-            if (title) title.innerText = (currentPageType === 'income') ? '수입 내역 추가' : '변동 지출 내역 추가';
+            let defaultTitle = '변동 지출 내역 추가';
+            if (currentPageType === 'income') defaultTitle = '수입 내역 추가';
+            else if (currentPageType === 'cash') defaultTitle = '현금 지출 내역 추가';
+            else if (currentPageType === 'fixed') defaultTitle = '고정 지출 내역 추가';
+            if (title) title.innerText = defaultTitle;
 
             // Default Dater
             if (currentPageType === 'cash' && dateInput) {
@@ -521,6 +529,7 @@ function confirmAddItem() {
     const category = document.getElementById('addItemCategory') ? document.getElementById('addItemCategory').value : '';
     const bankAccount = document.getElementById('addItemBank') ? document.getElementById('addItemBank').value : '';
     const card = document.getElementById('addItemCard') ? document.getElementById('addItemCard').value : '';
+    const content = document.getElementById('addItemContent') ? document.getElementById('addItemContent').value.trim() : '';
     const dateInput = document.getElementById('addItemDate');
     const date = (dateInput && currentPageType === 'cash') ? dateInput.value : '';
 
@@ -539,7 +548,10 @@ function confirmAddItem() {
             item.category = category;
             item.bankAccount = bankAccount;
             if (currentPageType !== 'income') item.card = card;
-            if (currentPageType === 'cash') item.date = date;
+            if (currentPageType === 'cash') {
+                item.date = date;
+                item.content = content;
+            }
             // alert skipped for smoother UX
         }
     } else {
@@ -563,7 +575,7 @@ function confirmAddItem() {
             name: name,
             values: new Array(12).fill(0),
             category: category,
-            content: '',
+            content: content,
             bankAccount: bankAccount,
             card: (currentPageType !== 'income') ? card : '',
             date: date
@@ -693,12 +705,20 @@ function renderMonthlyTable() {
     headerHTML += `
         <th class="px-6 py-2 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('name')">
             항목명 ${getSortIndicator('name')}
-        </th>
+        </th>`;
+
+    if (isCash) {
+        headerHTML += `<th class="px-6 py-2 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('content')">
+            내용 ${getSortIndicator('content')}
+        </th>`;
+    }
+
+    headerHTML += `
         <th class="px-6 py-2 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('category')">
             분류 ${getSortIndicator('category')}
         </th>`;
 
-    if (!isIncome && currentPageType !== 'fixed' && currentPageType !== 'variable') {
+    if (!isIncome && currentPageType !== 'fixed' && currentPageType !== 'variable' && currentPageType !== 'cash') {
         headerHTML += `
         <th class="px-6 py-4 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('card')">
             카드 ${getSortIndicator('card')}
@@ -738,6 +758,9 @@ function renderMonthlyTable() {
             } else if (sortState.column === 'category') {
                 valA = a.category || '';
                 valB = b.category || '';
+            } else if (sortState.column === 'content') {
+                valA = a.content || '';
+                valB = b.content || '';
             } else if (sortState.column === 'card') {
                 valA = a.card || '';
                 valB = b.card || '';
@@ -799,6 +822,14 @@ function renderMonthlyTable() {
             value="${item.name}" onblur="updateItemName('${item.id}', this.value)" placeholder="항목 이름">
         </td>`;
 
+            // Content (if cash)
+            if (isCash) {
+                bodyHTML += `<td class="px-6 py-1">
+        <input type="text" class="w-full bg-transparent text-white text-sm focus:outline-none focus:border-b focus:border-blue-500 transition px-1"
+            value="${item.content || ''}" onblur="updateItemContent('${item.id}', this.value)" placeholder="상세 내용">
+        </td>`;
+            }
+
             // Category (Select)
             bodyHTML += `<td class="px-6 py-1">
         <select class="bg-gray-900 border border-gray-700 text-white text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5"
@@ -808,8 +839,8 @@ function renderMonthlyTable() {
         </select>
             </td>`;
 
-            // Card (Select) - Skip for Income, Fixed, and Variable
-            if (!isIncome && currentPageType !== 'fixed' && currentPageType !== 'variable') {
+            // Card (Select) - Skip for Income, Fixed, Variable, and Cash
+            if (!isIncome && currentPageType !== 'fixed' && currentPageType !== 'variable' && currentPageType !== 'cash') {
                 bodyHTML += `<td class="px-6 py-1">
             <select class="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5"
                 onchange="updateItemCard('${item.id}', this.value)">
