@@ -84,6 +84,9 @@ let roadmapData = {
         details: { monthly: {} },
         settlement: { monthly: {} }
     },
+    dashboardSubtitle: "자산 흐름 요약",
+    pageTitles: {},
+    sidebarConfig: null,
     updatedAt: 0
 };
 
@@ -189,7 +192,8 @@ function loadData() {
                                         businessNames: roadmapData.businessNames || [],
                                         investment: roadmapData.investment,
                                         management: roadmapData.management || {},
-                                        moneyPlan: roadmapData.moneyPlan
+                                        moneyPlan: roadmapData.moneyPlan,
+                                        sidebarConfig: roadmapData.sidebarConfig || null
                                     };
                                     docRef.set(defaultData);
                                     localStorage.setItem('supermoon_data', JSON.stringify(defaultData));
@@ -256,7 +260,8 @@ function syncMemoryToCloud() {
         moneyPlan: roadmapData.moneyPlan || {},
         updatedAt: roadmapData.updatedAt || 0,
         dashboardSubtitle: roadmapData.dashboardSubtitle || "자산 흐름 요약",
-        pageTitles: roadmapData.pageTitles || {}
+        pageTitles: roadmapData.pageTitles || {},
+        sidebarConfig: roadmapData.sidebarConfig || null
     };
 
     db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave)
@@ -296,6 +301,7 @@ function mergeCloudData(cloudData) {
     if (cloudData.moneyPlan) roadmapData.moneyPlan = cloudData.moneyPlan;
     if (cloudData.dashboardSubtitle) roadmapData.dashboardSubtitle = cloudData.dashboardSubtitle;
     if (cloudData.pageTitles) roadmapData.pageTitles = cloudData.pageTitles;
+    if (cloudData.sidebarConfig) roadmapData.sidebarConfig = cloudData.sidebarConfig;
     roadmapData.updatedAt = cloudData.updatedAt || 0;
 
     // Ensure no properties are undefined
@@ -315,8 +321,8 @@ function processParsedData(parsed) {
     else roadmapData.updatedAt = 0;
 
     if (parsed.dashboardSubtitle) roadmapData.dashboardSubtitle = parsed.dashboardSubtitle;
-    if (parsed.pageTitles) roadmapData.pageTitles = parsed.pageTitles;
-    else roadmapData.pageTitles = {};
+    if (parsed.sidebarConfig) roadmapData.sidebarConfig = parsed.sidebarConfig;
+    else roadmapData.sidebarConfig = null;
 
     // Check if it's the new format (has 'years' property) or old format
     let yearsData;

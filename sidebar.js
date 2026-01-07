@@ -20,39 +20,39 @@ const defaultMenuConfig = [
 
 function getMenuConfig() {
     try {
-        const saved = localStorage.getItem('sidebar_config');
-        if (saved) {
-            let config = JSON.parse(saved);
-            if (!config.find(item => item.id === 'moneyPlan')) {
-                const roadmapIdx = config.findIndex(item => item.id === 'roadmap');
-                const newItem = { type: 'item', id: 'moneyPlan', label: '머니 플랜', icon: '💰', link: 'money_plan.html' };
-                if (roadmapIdx !== -1) config.splice(roadmapIdx + 1, 0, newItem);
-                else config.push(newItem);
-            }
-            if (!config.find(item => item.id === 'settlement')) {
-                const cashIdx = config.findIndex(item => item.id === 'cash');
-                const newItem = { type: 'item', id: 'settlement', label: '지출 예정산', icon: '💰', link: 'settlement.html' };
-                if (cashIdx !== -1) config.splice(cashIdx + 1, 0, newItem);
-                else config.push(newItem);
-            }
+        // 우선순위: 1. roadmapData.sidebarConfig (메모리/서버 동기화 값)
+        //          2. localStorage (로컬 저장된 값)
+        //          3. defaultMenuConfig (기본값)
+
+        let config = null;
+        if (typeof roadmapData !== 'undefined' && roadmapData.sidebarConfig) {
+            config = roadmapData.sidebarConfig;
+        } else {
+            const saved = localStorage.getItem('sidebar_config');
+            if (saved) config = JSON.parse(saved);
+        }
+
+        if (config) {
+            // New Item Migration Logic (Ensuring new items exist in old configs)
+            const checkAndAdd = (id, newItem, anchorId = null) => {
+                if (!config.find(item => item.id === id)) {
+                    const idx = anchorId ? config.findIndex(item => item.id === anchorId) : -1;
+                    if (idx !== -1) config.splice(idx + 1, 0, newItem);
+                    else config.push(newItem);
+                }
+            };
+
+            checkAndAdd('moneyPlan', { type: 'item', id: 'moneyPlan', label: '머니 플랜', icon: '💰', link: 'money_plan.html' }, 'roadmap');
+            checkAndAdd('settlement', { type: 'item', id: 'settlement', label: '지출 예정산', icon: '💰', link: 'settlement.html' }, 'cash');
+
             if (!config.find(item => item.id === 'business')) {
                 config.push({ type: 'header', label: '사업 관리' });
                 config.push({ type: 'item', id: 'business', label: '사업 관리', icon: '💼', link: 'business.html' });
             }
-            if (!config.find(item => item.id === 'investment')) {
-                const incomeIdx = config.findIndex(item => item.id === 'income');
-                const newItem = { type: 'item', id: 'investment', label: '투자 수입', icon: '📈', link: 'investment.html' };
-                if (incomeIdx !== -1) config.splice(incomeIdx + 1, 0, newItem);
-                else config.push(newItem);
-            }
-            if (!config.find(item => item.id === 'secret_board')) {
-                // Determine position: After 'Asset Management' or 'Investment'?
-                // Let's put it after Investment
-                const investIdx = config.findIndex(item => item.id === 'investment');
-                const newItem = { type: 'item', id: 'secret_board', label: '시크릿 보드', icon: '🚩', link: 'secret_board.html' };
-                if (investIdx !== -1) config.splice(investIdx + 1, 0, newItem);
-                else config.push(newItem);
-            }
+
+            checkAndAdd('investment', { type: 'item', id: 'investment', label: '투자 수입', icon: '📈', link: 'investment.html' }, 'income');
+            checkAndAdd('secret_board', { type: 'item', id: 'secret_board', label: '시크릿 보드', icon: '🚩', link: 'secret_board.html' }, 'investment');
+
             if (!config.find(item => item.id === 'management')) {
                 config.push({ type: 'header', label: '정보 관리' });
                 config.push({ type: 'item', id: 'management', label: '정보 관리', icon: '📋', link: 'management.html' });
@@ -61,18 +61,27 @@ function getMenuConfig() {
         }
         return defaultMenuConfig;
     } catch (e) {
+        console.error('Sidebar config load error:', e);
         return defaultMenuConfig;
     }
 }
 
 function saveMenuConfig(config) {
     localStorage.setItem('sidebar_config', JSON.stringify(config));
+    if (typeof roadmapData !== 'undefined') {
+        roadmapData.sidebarConfig = config;
+        if (typeof saveData === 'function') saveData();
+    }
     location.reload();
 }
 
 function resetMenuConfig() {
-    if (confirm('사이드바 설정을 초기화하시겠습니까?')) {
+    if (confirm('사이드바 설정을 초기화하시겠습니까? 기기 간 연동된 설정도 초기화됩니다.')) {
         localStorage.removeItem('sidebar_config');
+        if (typeof roadmapData !== 'undefined') {
+            roadmapData.sidebarConfig = null;
+            if (typeof saveData === 'function') saveData();
+        }
         location.reload();
     }
 }
@@ -116,6 +125,13 @@ window.updateSidebarItemName = function (index, newName) {
     const config = getMenuConfig();
     config[index].label = newName;
     localStorage.setItem('sidebar_config', JSON.stringify(config));
+    if (typeof roadmapData !== 'undefined') {
+        roadmapData.sidebarConfig = config;
+        // We don't call saveData() on every blur to avoid excessive syncs, 
+        // but since location.reload() isn't called here, we should probably sync eventually.
+        // Actually, sidebar manager has a "Save & Close" button usually? 
+        // Let's check.
+    }
 };
 
 let sidebarDragSourceIdx = null;
@@ -140,6 +156,9 @@ window.handleSidebarDrop = function (e, targetIdx) {
     config.splice(targetIdx, 0, movedItem);
 
     localStorage.setItem('sidebar_config', JSON.stringify(config));
+    if (typeof roadmapData !== 'undefined') {
+        roadmapData.sidebarConfig = config;
+    }
     renderSidebarManagerList();
     sidebarDragSourceIdx = null;
 };
@@ -169,6 +188,11 @@ function renderSidebarManagerList() {
 }
 
 window.saveAndReloadSidebar = function () {
+    const config = getMenuConfig();
+    if (typeof roadmapData !== 'undefined') {
+        roadmapData.sidebarConfig = config;
+        if (typeof saveData === 'function') saveData();
+    }
     location.reload();
 }
 
