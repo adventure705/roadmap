@@ -17,10 +17,18 @@ function initMoneyPlan() {
         };
     }
 
+
+    // Set Page Type for Sidebar/Memos
+    window.currentPageType = 'moneyPlan';
+
     // Check global categories
     if (!roadmapData.moneyPlan.categories) {
         roadmapData.moneyPlan.categories = ["생일", "명절", "경조금", "세금", "병원", "기타"];
     }
+
+    // Check Common Memos
+    if (!roadmapData.commonMemos) roadmapData.commonMemos = {};
+    if (!roadmapData.commonMemos.moneyPlan) roadmapData.commonMemos.moneyPlan = [];
 
     const yearData = roadmapData.years[currentYear];
     if (!yearData.moneyPlan) {
@@ -252,11 +260,17 @@ function renderMainTable() {
                 displayRes = (resVal === undefined) ? "" : resVal;
             }
 
-            bodyHTML += `<td class="p-0 border border-white/10">
-                            <input type="text" class="input-plain ${isReserveNumeric ? 'text-right' : 'text-center'}" 
+            bodyHTML += `<td class="p-0 border border-white/10 h-full">`;
+
+            if (group.isNumeric) {
+                bodyHTML += `<input type="text" class="input-plain text-right" 
                                 value="${displayRes}" 
-                                onchange="updateMoneyValue('${group.key}', 'reserve', ${cIdx}, null, this.value)">
-                         </td>`;
+                                onchange="updateMoneyValue('${group.key}', 'reserve', ${cIdx}, null, this.value)">`;
+            } else {
+                bodyHTML += `<textarea class="input-plain text-center" 
+                                onchange="updateMoneyValue('${group.key}', 'reserve', ${cIdx}, null, this.value)">${displayRes}</textarea>`;
+            }
+            bodyHTML += `</td>`;
 
             // Months
             let rowTotal = 0;
@@ -265,10 +279,15 @@ function renderMainTable() {
                 const displayVal = group.isNumeric ? (val === 0 ? "" : val.toLocaleString()) : val;
                 if (group.isNumeric && typeof val === 'number') rowTotal += val;
 
-                bodyHTML += `<td class="p-0 border border-white/10">
-                                <input type="text" class="input-plain ${group.isNumeric ? 'text-right' : 'text-left'}" value="${displayVal}" 
-                                    onchange="updateMoneyValue('${group.key}', 'monthly', ${cIdx}, ${mIdx}, this.value)">
-                             </td>`;
+                bodyHTML += `<td class="p-0 border border-white/10 h-full">`;
+                if (group.isNumeric) {
+                    bodyHTML += `<input type="text" class="input-plain text-right" value="${displayVal}" 
+                                    onchange="updateMoneyValue('${group.key}', 'monthly', ${cIdx}, ${mIdx}, this.value)">`;
+                } else {
+                    bodyHTML += `<textarea class="input-plain text-left" 
+                                    onchange="updateMoneyValue('${group.key}', 'monthly', ${cIdx}, ${mIdx}, this.value)">${displayVal}</textarea>`;
+                }
+                bodyHTML += `</td>`;
             });
 
             // Total Column
@@ -513,6 +532,144 @@ function toggleSelectAll() {
     const grid = getActiveGrid();
     grid.allSelected = !grid.allSelected;
     renderAll();
+}
+
+// --- Common Memos ---
+// Using global renderMemos from sidebar.js
+
+
+// --- Copy Data Modal Logic ---
+// --- Copy Data Modal Logic ---
+function openCopyDataModal() {
+    const modal = document.getElementById('copyDataModal');
+    const srcSel = document.getElementById('copySourceYear');
+    const tgtSel = document.getElementById('copyTargetYear');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    const years = Object.keys(roadmapData.years).sort().map(y => parseInt(y));
+    // Ensure currentYear is in list
+    if (!years.includes(currentYear)) years.push(currentYear);
+    // Ensure next year is in list for copying to future
+    if (!years.includes(currentYear + 1)) years.push(currentYear + 1);
+    years.sort((a, b) => a - b);
+
+    // Filter unique
+    const uniqueYears = [...new Set(years)];
+    const opts = uniqueYears.map(y => `<option value="${y}">${y}년</option>`).join('');
+
+    if (srcSel) {
+        srcSel.innerHTML = opts;
+        srcSel.value = currentYear;
+    }
+    if (tgtSel) {
+        tgtSel.innerHTML = opts;
+        tgtSel.value = currentYear + 1;
+    }
+}
+
+function closeCopyDataModal() {
+    const modal = document.getElementById('copyDataModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+function confirmCopyData() {
+    const srcYear = parseInt(document.getElementById('copySourceYear').value);
+    const tgtYear = parseInt(document.getElementById('copyTargetYear').value);
+    const overwrite = document.getElementById('copyOverwrite').checked;
+
+    if (isNaN(srcYear) || isNaN(tgtYear)) return;
+    if (srcYear === tgtYear) {
+        alert("원본과 대상 연도가 같습니다.");
+        return;
+    }
+
+    if (overwrite && !confirm(`${srcYear}년 데이터를 ${tgtYear}년으로 복사하시겠습니까?\n대상 연도의 기존 데이터(머니플랜)는 모두 덮어씌워집니다.`)) return;
+
+    // Ensure Target Year Data Exists
+    if (!roadmapData.years[tgtYear]) {
+        roadmapData.years[tgtYear] = roadmapData.createYearData();
+    }
+
+    const srcData = roadmapData.years[srcYear] ? roadmapData.years[srcYear].moneyPlan : null;
+    const tgtYearData = roadmapData.years[tgtYear];
+
+    if (!srcData) {
+        alert(`${srcYear}년의 머니플랜 데이터가 없습니다.`);
+        return;
+    }
+
+    // Prepare structure if missing
+    if (!tgtYearData.moneyPlan) {
+        tgtYearData.moneyPlan = {
+            plan: { reserve: {}, monthly: {} },
+            details: { monthly: {} },
+            settlement: { monthly: {} },
+            rowHeights: [],
+            colWidths: [],
+            headerHeight: 0
+        };
+    }
+
+    // Deep Copy Logic
+    const clone = JSON.parse(JSON.stringify(srcData));
+
+    if (overwrite) {
+        tgtYearData.moneyPlan = clone;
+    } else {
+        // Simple Merge: Copy if target is empty
+        const tgtPlan = tgtYearData.moneyPlan;
+
+        // Merge Plan
+        ['plan', 'details', 'settlement'].forEach(key => {
+            const sGroup = clone[key] || {};
+            const tGroup = tgtPlan[key] || {};
+
+            // Reserve
+            if (sGroup.reserve) {
+                if (!tGroup.reserve) tGroup.reserve = {};
+                Object.keys(sGroup.reserve).forEach(k => {
+                    if (tGroup.reserve[k] === undefined || tGroup.reserve[k] === "") {
+                        tGroup.reserve[k] = sGroup.reserve[k];
+                    }
+                });
+            }
+
+            // Monthly
+            if (sGroup.monthly) {
+                if (!tGroup.monthly) tGroup.monthly = {};
+                Object.keys(sGroup.monthly).forEach(mIdx => {
+                    if (!tGroup.monthly[mIdx]) tGroup.monthly[mIdx] = {};
+                    const sMonth = sGroup.monthly[mIdx];
+                    const tMonth = tGroup.monthly[mIdx];
+                    Object.keys(sMonth).forEach(cIdx => {
+                        if (tMonth[cIdx] === undefined || tMonth[cIdx] === "") {
+                            tMonth[cIdx] = sMonth[cIdx];
+                        }
+                    });
+                });
+            }
+        });
+
+        // Copy Layout info if missing
+        if (!tgtPlan.rowHeights || tgtPlan.rowHeights.length === 0) tgtPlan.rowHeights = clone.rowHeights;
+        if (!tgtPlan.colWidths || tgtPlan.colWidths.length === 0) tgtPlan.colWidths = clone.colWidths;
+    }
+
+    saveData();
+    closeCopyDataModal();
+    renderMainTable();
+    alert("연도별 데이터 복사가 완료되었습니다.");
+
+    // If we copied TO a different year, ask to switch
+    if (tgtYear !== currentYear && confirm(`${tgtYear}년으로 이동하시겠습니까?`)) {
+        changeYear(tgtYear - currentYear); // Reuse existing changeYear logic
+    }
 }
 
 window.addEventListener('load', initMoneyPlan);

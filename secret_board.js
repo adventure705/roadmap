@@ -267,25 +267,28 @@ function renderBlock(blockId, tableId) {
             row.cells.equity_ratio = ratio;
         });
     } else if (['assetSummary', 'liabilitySummary', 'assetDetails', 'assetDetails2'].includes(blockId)) {
-        // Iterate all columns to find Ratio columns and pair them with Amount columns
-        const ratioCols = data.cols.filter(c => c.name.includes('비중') || ['ratio', 'rate'].includes(c.id));
-        const defaultAmountCol = data.cols.find(c => c.name.includes('금액')) || data.cols.find(c => c.id === 'amount') || data.cols.find(c => c.type === 'number' && c.sum);
-
-        if (ratioCols.length > 0) {
-            data.rows.forEach(row => {
-                ratioCols.forEach(rCol => {
-                    let targetAmountCol = defaultAmountCol;
-                    if (rCol.name.includes('비중')) {
-                        const targetName = rCol.name.replace('비중', '금액');
-                        const match = data.cols.find(c => c.name === targetName);
-                        if (match) targetAmountCol = match;
+        // Map Weight Columns to their corresponding Amount Columns (nearest left '금액')
+        const weightMap = {}; // { weightColId: amountColId }
+        data.cols.forEach((col, i) => {
+            if (col.name.includes('비중')) {
+                for (let j = i - 1; j >= 0; j--) {
+                    if (data.cols[j].name.includes('금액')) {
+                        weightMap[col.id] = data.cols[j].id;
+                        break;
                     }
+                }
+            }
+        });
 
-                    if (targetAmountCol) {
-                        const total = totalSum[targetAmountCol.id] || 0;
-                        const val = parseInt(String(row.cells[targetAmountCol.id] || 0).replace(/,/g, '')) || 0;
+        if (Object.keys(weightMap).length > 0) {
+            data.rows.forEach(row => {
+                Object.keys(weightMap).forEach(wId => {
+                    const aId = weightMap[wId];
+                    if (aId) {
+                        const total = totalSum[aId] || 0;
+                        const val = parseInt(String(row.cells[aId] || 0).replace(/,/g, '')) || 0;
                         const pct = total ? ((val / total) * 100).toFixed(1) + '%' : '0%';
-                        row.cells[rCol.id] = pct;
+                        row.cells[wId] = pct;
                     }
                 });
             });
@@ -340,7 +343,8 @@ function renderBlock(blockId, tableId) {
 
             // For display
             let displayVal = val;
-            if (col.type === 'number' && val !== '' && !isNaN(parseInt(String(val).replace(/,/g, '')))) {
+            const isNumCol = (col.type === 'number' || col.name.includes('금액'));
+            if (isNumCol && val !== '' && !isNaN(parseInt(String(val).replace(/,/g, '')))) {
                 displayVal = parseInt(String(val).replace(/,/g, '')).toLocaleString();
             }
 
@@ -366,7 +370,7 @@ function updateCell(blockId, rIdx, colId, val) {
     const sb = roadmapData.years[currentYear].secretBoard;
     const col = sb[blockId].cols.find(c => c.id === colId);
     let value = val;
-    if (col.type === 'number') {
+    if (col.type === 'number' || col.name.includes('금액')) {
         value = parseInt(val.replace(/,/g, '')) || 0;
     }
     sb[blockId].rows[rIdx].cells[colId] = value;

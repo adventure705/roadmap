@@ -405,7 +405,7 @@ window.renderMemos = function (containerId = 'memoContainer') {
     html += '</div></div>';
 
     // 2. Monthly Memo (Exclude some types)
-    if (currentPageType !== 'installment' && currentPageType !== 'business' && currentPageType !== 'investment' && currentPageType !== 'roadmap' && currentPageType !== 'management' && currentPageType !== 'secret_board') {
+    if (currentPageType !== 'installment' && currentPageType !== 'business' && currentPageType !== 'investment' && currentPageType !== 'roadmap' && currentPageType !== 'management' && currentPageType !== 'secret_board' && currentPageType !== 'moneyPlan') {
         const monthKey = roadmapData.months[currentMonth];
         const monthlyMemosMap = yearData.monthlyMemos || {};
         let monthlyMemos = [];

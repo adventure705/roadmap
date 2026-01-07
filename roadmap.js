@@ -35,6 +35,7 @@ function renderSheetTable() {
     let headerHTML = '<th class="px-4 py-3 bg-gray-800 text-center min-w-[150px]">항목 (Category)</th>';
     roadmapData.months.forEach(m => headerHTML += `<th class="px-4 py-3 text-center min-w-[100px]">${m}</th>`); // Reduced min-width slightly
     headerHTML += '<th class="px-4 py-3 font-bold text-blue-400 text-right min-w-[100px] bg-gray-900 border-l border-white/10">합계 (Total)</th>';
+    headerHTML += '<th class="px-4 py-3 font-bold text-green-400 text-right min-w-[100px] bg-gray-900 border-l border-white/10">평균</th>';
     headerHTML += '<th class="px-4 py-3 font-bold text-yellow-400 text-right min-w-[80px] sticky right-0 bg-gray-900 border-l border-white/10">달성률</th>';
     thead.innerHTML = headerHTML;
 
@@ -157,11 +158,11 @@ function renderSheetTable() {
     rows.forEach(row => {
         // Spacer
         if (row.type === 'spacer') {
-            bodyHTML += '<tr><td colspan="15" class="h-6 bg-transparent border-none"></td></tr>'; return;
+            bodyHTML += '<tr><td colspan="16" class="h-6 bg-transparent border-none"></td></tr>'; return;
         }
         // Section Header
         if (row.type === 'section') {
-            bodyHTML += `<tr><td colspan="15" class="px-4 py-2 font-bold text-blue-300 bg-gray-800/50">${row.label}</td></tr>`; return;
+            bodyHTML += `<tr><td colspan="16" class="px-4 py-2 font-bold text-blue-300 bg-gray-800/50">${row.label}</td></tr>`; return;
         }
 
         const totalVal = sum(row.data);
@@ -215,6 +216,16 @@ function renderSheetTable() {
 
         // Total Column
         bodyHTML += `<td class="px-4 py-2 text-right font-bold text-white bg-gray-900 border-l border-white/10">${totalDisplay}</td>`;
+
+        // Calculated Average
+        const nonZeroCount = row.data.filter(v => v !== 0).length;
+        const averageVal = nonZeroCount > 0 ? totalVal / nonZeroCount : 0;
+        const averageDisplay = row.isPercent ?
+            (nonZeroCount > 0 ? averageVal.toFixed(1) + '%' : '-') :
+            formatMoneyFull(Math.round(averageVal)) + '원';
+
+        // Average Column
+        bodyHTML += `<td class="px-4 py-2 text-right font-bold text-green-400 bg-gray-900 border-l border-white/10">${averageDisplay}</td>`;
 
         // Rate Column
         bodyHTML += `<td class="px-4 py-2 text-right font-bold text-white bg-gray-900 border-l border-white/10 sticky right-0">${rateDisplay}</td>`;
