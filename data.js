@@ -86,27 +86,11 @@ let roadmapData = {
     },
     dashboardSubtitle: "자산 흐름 요약",
     pageTitles: {},
-    sidebarConfig: [
-        { type: 'item', id: 'dashboard', label: '대시보드', icon: '📊', link: 'dashboard.html' },
-        { type: 'item', id: 'roadmap', label: '단기 로드맵', icon: '📅', link: 'roadmap.html' },
-        { type: 'item', id: 'moneyPlan', label: '머니 플랜', icon: '💰', link: 'money_plan.html' },
-        { type: 'header', label: '지출 관리' },
-        { type: 'item', id: 'fixed', label: '고정 지출', icon: '🔒', link: 'fixed_expenses.html' },
-        { type: 'item', id: 'variable', label: '변동 지출', icon: '🛒', link: 'variable_expenses.html' },
-        { type: 'item', id: 'installments', label: '할부', icon: '💳', link: 'installments.html' },
-        { type: 'item', id: 'cash', label: '현금 지출', icon: '💸', link: 'cash_expenses.html' },
-        { type: 'item', id: 'settlement', label: '지출 예정산', icon: '💰', link: 'settlement.html' },
-        { type: 'header', label: '수입 관리' },
-        { type: 'item', id: 'income', label: '수입', icon: '💰', link: 'income.html' },
-        { type: 'item', id: 'investment', label: '투자 수입', icon: '📈', link: 'investment.html' },
-        { type: 'item', id: 'secret_board', label: '시크릿 보드', icon: '🚩', link: 'secret_board.html' },
-        { type: 'header', label: '사업 관리' },
-        { type: 'item', id: 'business', label: '사업 관리', icon: '💼', link: 'business.html' },
-        { type: 'header', label: '정보 관리' },
-        { type: 'item', id: 'management', label: '정보 관리', icon: '📋', link: 'management.html' }
-    ],
+    sidebarConfig: null, // 초기에는 null로 두어 클라우드 데이터 대기
     updatedAt: 0
 };
+
+let isCloudSyncComplete = false; // 클라우드 데이터 수신 여부 확인용
 
 let currentYear = 2026;
 let currentMonth = 0; // 0 = Jan
@@ -154,10 +138,9 @@ function loadData() {
                     }
 
                     docRef.onSnapshot(doc => {
+                        isCloudSyncComplete = true; // 클라우드와 연결 확인됨
+
                         // If we have unsaved local changes (Dirty), we prioritize Local over Cloud (Push)
-                        // UNLESS this snapshot is triggered by our own write? 
-                        // Actually, if isDirty is true, it means we tried to save but maybe failed or haven't synced yet.
-                        // Ideally we check timestamps, but here we assume Local Edits > Old Cloud Data on startup.
 
                         if (isDirty) {
                             console.log("☁️ Local changes pending. Harmonizing with Cloud...");
@@ -261,6 +244,11 @@ function syncMemoryToCloud() {
         return;
     }
 
+    if (!isCloudSyncComplete) {
+        console.warn("⚠️ Cloud sync not complete. Delaying syncMemoryToCloud...");
+        return;
+    }
+
     if (isSyncing) return;
     isSyncing = true;
 
@@ -277,11 +265,12 @@ function syncMemoryToCloud() {
         management: roadmapData.management || {},
         moneyPlan: roadmapData.moneyPlan || {},
         updatedAt: roadmapData.updatedAt || 0,
-        pageTitles: roadmapData.pageTitles || {},
-        sidebarConfig: roadmapData.sidebarConfig || []
+        pageTitles: roadmapData.pageTitles || {}
     };
 
-    // sidebarConfig is already in dataToSave now
+    if (roadmapData.sidebarConfig) {
+        dataToSave.sidebarConfig = roadmapData.sidebarConfig;
+    }
 
     db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave, { merge: true })
         .then(() => {
