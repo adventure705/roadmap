@@ -1,5 +1,8 @@
 const formatMoneyFull = (amount) => {
-    return new Intl.NumberFormat('ko-KR').format(Math.round(amount));
+    if (amount === undefined || amount === null || amount === '') return '';
+    const num = typeof amount === 'string' ? parseFloat(amount.replace(/,/g, '')) : amount;
+    if (isNaN(num)) return amount;
+    return new Intl.NumberFormat('ko-KR').format(Math.round(num));
 };
 
 function initInvestmentPage() {
@@ -156,13 +159,12 @@ function renderTable(blockId) {
     // Helper to determine if a column should be summed
     const isSummableCol = (colName) => {
         const raw = (colName || '').replace(/\s+/g, '');
-        if (raw === '세후이자') return false; // Explicit exclusion
+        if (raw === '세후이자') return false;
         if (raw === '현황') return false;
-        // Allow list: must contain money-related terms
-        if (raw.includes('금액') || raw.includes('원금') || raw.includes('비용') || raw.includes('수익') || raw.includes('배당') || raw.includes('입금')) {
-            return true;
-        }
-        return false;
+        if (raw.includes('율') || raw.includes('비율')) return false; // Percentage/Interest Rate
+
+        const keywords = ['금액', '원금', '비용', '수익', '배당', '입금', '이자', '세전', '납입', '수령', '합계', '잔액', '현금', '자산'];
+        return keywords.some(k => raw.includes(k));
     };
 
     // [New] Investor Total Calculation
@@ -281,6 +283,15 @@ function renderTable(blockId) {
             let isReadOnly = false;
             const colColor = grid.colColors[cIdx] || '';
             const finalBgString = (rowColor && rowColor !== 'transparent') ? rowColor : (colColor && colColor !== 'transparent' ? colColor : '');
+
+            // Formatting check
+            const colNameRaw = (grid.cols[cIdx] || '').replace(/\s+/g, '');
+            if (isSummableCol(colNameRaw) && !isSumRow && val) {
+                const numVal = parseFloat(String(val).replace(/,/g, ''));
+                if (!isNaN(numVal)) {
+                    val = formatMoneyFull(numVal);
+                }
+            }
 
             // Specific styling for Investor column cells
             let cellStyle = '';
@@ -612,18 +623,16 @@ function autoFormatValue(val) {
     const pureDigits = raw.replace(/[^0-9]/g, '');
     if (raw === pureDigits) {
         if (pureDigits.length === 8) {
-            // YYYYMMDD -> YYYY.MM.DD
             return `${pureDigits.substring(0, 4)}.${pureDigits.substring(4, 6)}.${pureDigits.substring(6, 8)}`;
         } else if (pureDigits.length === 6) {
-            // YYMMDD -> YY.MM.DD
             return `${pureDigits.substring(0, 2)}.${pureDigits.substring(2, 4)}.${pureDigits.substring(4, 6)}`;
         }
     }
 
-    // 2. Number Check (Round to integer and add commas)
+    // 2. Number Check (Add commas, remove decimals)
     const numRaw = raw.replace(/,/g, '');
     if (!isNaN(numRaw) && numRaw !== '') {
-        return Math.round(Number(numRaw)).toLocaleString();
+        return formatMoneyFull(numRaw);
     }
 
     return raw;
