@@ -260,11 +260,14 @@ function syncMemoryToCloud() {
         moneyPlan: roadmapData.moneyPlan || {},
         updatedAt: roadmapData.updatedAt || 0,
         dashboardSubtitle: roadmapData.dashboardSubtitle || "자산 흐름 요약",
-        pageTitles: roadmapData.pageTitles || {},
-        sidebarConfig: roadmapData.sidebarConfig || null
+        pageTitles: roadmapData.pageTitles || {}
     };
 
-    db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave)
+    if (roadmapData.sidebarConfig) {
+        dataToSave.sidebarConfig = roadmapData.sidebarConfig;
+    }
+
+    db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave, { merge: true })
         .then(() => {
             console.log("✅ Firebase Sync Success: " + new Date(roadmapData.updatedAt).toLocaleTimeString());
             isDirty = false;

@@ -58,10 +58,10 @@ function getMenuConfig() {
                 config.push({ type: 'item', id: 'management', label: '정보 관리', icon: '📋', link: 'management.html' });
             }
 
-            // Sync back to roadmapData to prevent 'null' being saved to cloud later
-            if (typeof roadmapData !== 'undefined' && !roadmapData.sidebarConfig) {
-                roadmapData.sidebarConfig = config;
-            }
+            // Sync back to roadmapData ONLY if it differs from the current global state
+            // and we are NOT in the middle of waiting for a cloud sync.
+            // Actually, we should avoid side-effects here. 
+            // The sidebar will be re-rendered via triggerUIUpdate() once cloud data arrives.
 
             return config;
         }
@@ -133,10 +133,13 @@ window.updateSidebarItemName = function (index, newName) {
     localStorage.setItem('sidebar_config', JSON.stringify(config));
     if (typeof roadmapData !== 'undefined') {
         roadmapData.sidebarConfig = config;
-        // We don't call saveData() on every blur to avoid excessive syncs, 
-        // but since location.reload() isn't called here, we should probably sync eventually.
-        // Actually, sidebar manager has a "Save & Close" button usually? 
-        // Let's check.
+        // User is explicitly editing, so we should mark as dirty and sync
+        if (typeof saveData === 'function') {
+            // We don't necessarily want to reload the whole page here if user is still typing,
+            // but we want to ensure it's saved.
+            // Usually onblur is fine.
+            saveData();
+        }
     }
 };
 
@@ -164,6 +167,8 @@ window.handleSidebarDrop = function (e, targetIdx) {
     localStorage.setItem('sidebar_config', JSON.stringify(config));
     if (typeof roadmapData !== 'undefined') {
         roadmapData.sidebarConfig = config;
+        // Sync to cloud on drop so order is preserved
+        if (typeof saveData === 'function') saveData();
     }
     renderSidebarManagerList();
     sidebarDragSourceIdx = null;
