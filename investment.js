@@ -11,8 +11,13 @@ function initInvestmentPage() {
             investors: [
                 { id: 1, name: "기본 투자자", block2: { rows: ["세부 항목 1"], cols: ["구분 1"], data: {} } }
             ],
-            selectedInvestorId: 1
+            selectedInvestorId: 1,
+            currentYear: new Date().getFullYear()
         };
+    }
+    // Ensure currentYear exists if loading from old data
+    if (!roadmapData.investment.currentYear) {
+        roadmapData.investment.currentYear = new Date().getFullYear();
     }
 
     renderAll();
@@ -60,6 +65,10 @@ function renderInvestorSelect() {
         html += `<option value="${inv.id}" ${isSelected ? 'selected' : ''} style="background: #1e293b; color: white;">${inv.name}</option>`;
     });
     select.innerHTML = html;
+
+    // Update Year Display
+    const yearDisp = document.getElementById('currentYearDisplay');
+    if (yearDisp) yearDisp.innerText = roadmapData.investment.currentYear;
 }
 
 function changeInvestor(id) {
@@ -68,11 +77,54 @@ function changeInvestor(id) {
     saveData();
 }
 
+function changeYear(delta) {
+    roadmapData.investment.currentYear += delta;
+    renderInvestorSelect();
+    renderTable('block2');
+    saveData();
+
+}
+
 function getActiveGrid(blockId) {
     if (blockId === 'block1') return roadmapData.investment.block1;
 
     const inv = roadmapData.investment.investors.find(i => i.id == roadmapData.investment.selectedInvestorId);
-    return inv ? inv.block2 : null;
+    if (!inv) return null;
+
+    if (blockId === 'block2') {
+        const curYear = roadmapData.investment.currentYear || new Date().getFullYear();
+
+        // Ensure years storage exists
+        if (!inv.years) inv.years = {};
+
+        // If data for current year doesn't exist, initialize it
+        if (!inv.years[curYear]) {
+            // Restore legacy configuration
+            const legacy = inv.block2 || {};
+            const hasLegacyConfig = legacy.cols && legacy.cols.length > 0;
+            const firstRowTitle = (legacy.rows && legacy.rows.length > 0) ? legacy.rows[0] : "합계";
+
+            inv.years[curYear] = {
+                rows: [firstRowTitle, "1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"],
+                cols: hasLegacyConfig ? [...legacy.cols] : ["내용", "금액", "비고"],
+                data: {},
+                corner: `${curYear}년`,
+                rowColors: ['#1e293b', '', '', '', '', '', '', '', '', '', '', '', ''],
+                colWidths: legacy.colWidths ? [...legacy.colWidths] : [],
+                colColors: legacy.colColors ? [...legacy.colColors] : []
+            };
+
+            if (hasLegacyConfig && legacy.data) {
+                legacy.cols.forEach((_, cIdx) => {
+                    const val = legacy.data[`0-${cIdx}`];
+                    if (val) inv.years[curYear].data[`0-${cIdx}`] = val;
+                });
+            }
+        }
+        return inv.years[curYear];
+    }
+
+    return null; // Should not reach here
 }
 
 function renderTable(blockId) {
@@ -964,4 +1016,46 @@ function removeInvestor(id) {
     saveData();
 }
 
+
+// Grid Copy/Paste
+let gridClipboard = null;
+
+function copyGrid(blockId) {
+    const grid = getActiveGrid(blockId);
+    if (!grid) return;
+    gridClipboard = JSON.parse(JSON.stringify(grid));
+    alert('현재 테이블의 모든 설정(구조, 색상, 데이터)이 복사되었습니다.\n다른 년도나 다른 투자자를 선택한 후 [붙여넣기]를 눌러주세요.');
+}
+
+function pasteGrid(blockId) {
+    if (!gridClipboard) {
+        alert('복사된 그리드 데이터가 없습니다. 먼저 [복사] 버튼을 눌러주세요.');
+        return;
+    }
+    const grid = getActiveGrid(blockId);
+    if (!grid) return;
+
+    if (!confirm('복사한 데이터를 현재 테이블에 덮어쓰시겠습니까?\n이 작업은 취소할 수 없으며 현재 데이터는 모두 삭제됩니다.')) return;
+
+    const targetCorner = grid.corner;
+
+    grid.rows = [...gridClipboard.rows];
+    grid.cols = [...gridClipboard.cols];
+    grid.data = { ...gridClipboard.data };
+    grid.colWidths = gridClipboard.colWidths ? [...gridClipboard.colWidths] : [];
+    grid.colColors = gridClipboard.colColors ? [...gridClipboard.colColors] : [];
+    grid.rowColors = gridClipboard.rowColors ? [...gridClipboard.rowColors] : [];
+    grid.headerHeight = gridClipboard.headerHeight || 0;
+    grid.rowHeights = gridClipboard.rowHeights ? [...gridClipboard.rowHeights] : [];
+
+    if (blockId === 'block2' && targetCorner) {
+        grid.corner = targetCorner;
+    }
+
+    saveData();
+    renderTable(blockId);
+    alert('성공적으로 붙여넣기 되었습니다.');
+}
+
 window.addEventListener('load', initInvestmentPage);
+

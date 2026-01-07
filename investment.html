@@ -210,6 +210,12 @@
                             onchange="updateBlockTitle('block1', this.value)">
                     </div>
                     <div class="flex gap-2">
+                        <button onclick="copyGrid('block1')"
+                            class="bg-gray-800/40 hover:bg-gray-700/60 px-3 py-1.5 rounded-lg text-xs font-bold transition text-gray-400 hover:text-white">📋
+                            복사</button>
+                        <button onclick="pasteGrid('block1')"
+                            class="bg-blue-900/40 hover:bg-blue-900/60 px-3 py-1.5 rounded-lg text-xs font-bold transition text-blue-300">📥
+                            붙여넣기</button>
                         <button onclick="openStructureManager('block1')"
                             class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-xs font-bold transition">⚙️
                             구조 및 색상 관리</button>
@@ -238,17 +244,34 @@
                                 class="bg-transparent text-xl font-bold focus:outline-none focus:text-purple-400 w-64"
                                 onchange="updateBlockTitle('block2', this.value)">
                         </div>
+
+                        <!-- Year Selector -->
+                        <div class="flex items-center gap-1 bg-gray-800 rounded-lg p-1 border border-white/10">
+                            <button onclick="changeYear(-1)"
+                                class="w-6 h-6 flex items-center justify-center hover:bg-white/10 rounded text-gray-400 hover:text-white transition">◀</button>
+                            <span id="currentYearDisplay" class="text-sm font-bold px-2 w-12 text-center">2026</span>
+                            <button onclick="changeYear(1)"
+                                class="w-6 h-6 flex items-center justify-center hover:bg-white/10 rounded text-gray-400 hover:text-white transition">▶</button>
+                        </div>
+
                         <div class="flex items-center bg-gray-800 rounded-lg p-1 border border-white/10">
                             <select id="investorSelect" onchange="changeInvestor(this.value)"
                                 class="bg-transparent text-sm font-bold px-3 py-1 focus:outline-none">
                                 <!-- Options by JS -->
                             </select>
                         </div>
+
                         <button onclick="openInvestorManager()"
                             class="text-gray-500 hover:text-white transition text-xs">⚙️
                             투자자 관리</button>
                     </div>
                     <div class="flex gap-2">
+                        <button onclick="copyGrid('block2')"
+                            class="bg-gray-800/40 hover:bg-gray-700/60 px-3 py-1.5 rounded-lg text-xs font-bold transition text-gray-400 hover:text-white">📋
+                            복사</button>
+                        <button onclick="pasteGrid('block2')"
+                            class="bg-purple-900/40 hover:bg-purple-900/60 px-3 py-1.5 rounded-lg text-xs font-bold transition text-purple-300">📥
+                            붙여넣기</button>
                         <button onclick="openStructureManager('block2')"
                             class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-xs font-bold transition">⚙️
                             구조 및 색상 관리</button>
@@ -287,6 +310,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- Structure Manager Modal -->
     <div id="structureModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100]">
