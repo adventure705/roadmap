@@ -101,6 +101,45 @@ function renderTable(blockId) {
 
     const isAllSelected = grid.allSelected || false;
 
+    // [New] Investor Total Calculation
+    const investorIdx = grid.cols.findIndex(c => c.trim() === '투자자');
+    const investorTotals = {}; // Active Projects: { 'Name': { cIdx: sum } }
+    const completedTotals = { total: {}, investors: {} }; // Completed Projects
+
+    if (investorIdx > -1) {
+        const curStatusIdx = grid.cols.findIndex(c => c.trim() === '현황');
+        grid.rows.forEach((r, rIdx) => {
+            if (sumRows[rIdx]) return; // Skip sum rows
+
+            const isCompleted = (curStatusIdx > -1 && grid.data[`${rIdx}-${curStatusIdx}`] === '완료');
+            const invName = (grid.data[`${rIdx}-${investorIdx}`] || '').trim();
+
+            if (!isCompleted && invName && !investorTotals[invName]) investorTotals[invName] = {};
+            if (isCompleted && invName && !completedTotals.investors[invName]) completedTotals.investors[invName] = {};
+
+            // Calculate sums for all columns
+            grid.cols.forEach((_, cIdx) => {
+                const colNameRaw = (grid.cols[cIdx] || '').replace(/\s+/g, ''); // Normalize spaces
+                // Skip if sum column OR if '세후이자'
+                if (!sumCols[cIdx] && colNameRaw !== '세후이자') {
+                    const raw = String(grid.data[`${rIdx}-${cIdx}`] || '').replace(/,/g, '');
+                    const num = parseFloat(raw);
+                    if (!isNaN(num)) {
+                        if (isCompleted) {
+                            // Add to Total Completed
+                            completedTotals.total[cIdx] = (completedTotals.total[cIdx] || 0) + num;
+                            // Add to Investor Completed
+                            if (invName) completedTotals.investors[invName][cIdx] = (completedTotals.investors[invName][cIdx] || 0) + num;
+                        } else {
+                            // Add to Investor Active
+                            if (invName) investorTotals[invName][cIdx] = (investorTotals[invName][cIdx] || 0) + num;
+                        }
+                    }
+                }
+            });
+        });
+    }
+
     let html = `<thead><tr class="bg-gray-900/50" ${hHeight ? `style="height: ${hHeight}px"` : ''}>`;
     // Corner editable
     const cornerW = colWidths[0] ? `style="width: ${colWidths[0]}px; min-width: ${colWidths[0]}px"` : 'style="width: 160px; min-width: 160px"';
@@ -133,6 +172,26 @@ function renderTable(blockId) {
     });
     html += `</tr></thead>`;
 
+    // Color Palette
+    const investorColors = [
+        '#3b82f6', // blue
+        '#8b5cf6', // purple
+        '#10b981', // green
+        '#f59e0b', // amber
+        '#ec4899', // pink
+        '#06b6d4', // cyan
+        '#eab308', // yellow
+        '#6366f1', // indigo
+    ];
+    const getColorForName = (name) => {
+        if (!name) return '#94a3b8';
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return investorColors[Math.abs(hash) % investorColors.length];
+    };
+
     html += `<tbody>`;
     grid.rows.forEach((row, rIdx) => {
         const rowColor = grid.rowColors[rIdx] || 'transparent';
@@ -159,6 +218,13 @@ function renderTable(blockId) {
             const colColor = grid.colColors[cIdx] || '';
             const finalBgString = (rowColor && rowColor !== 'transparent') ? rowColor : (colColor && colColor !== 'transparent' ? colColor : '');
 
+            // Specific styling for Investor column cells
+            let cellStyle = '';
+            if (cIdx === investorIdx && val && !isSumRow) {
+                const iColor = getColorForName(val.trim());
+                cellStyle = `color: ${iColor}; font-weight: bold;`;
+            }
+
             if (sumRows[rIdx] || sumCols[cIdx]) {
                 isReadOnly = true;
                 let sum = 0;
@@ -173,27 +239,73 @@ function renderTable(blockId) {
                 };
 
                 if (sumRows[rIdx] && !sumCols[cIdx]) {
+                    // Vertical Sums
                     grid.rows.forEach((_, ri) => {
                         const rowStatus = statusIdx > -1 ? grid.data[`${ri}-${statusIdx}`] : '';
                         if (!sumRows[ri] && rowStatus !== '완료') checkAndAdd(grid.data[`${ri}-${cIdx}`]);
                     });
+
+                    // NEW: If this is '세후 이자' column, force '-'.
+                    const cName = (grid.cols[cIdx] || '').replace(/\s+/g, '');
+                    if (cName === '세후이자') hasValidNum = false;
+
                 } else if (!sumRows[rIdx] && sumCols[cIdx]) {
+                    // Horizontal Sums
                     if (isCompleted) {
-                        // Exclude completed row from its own total? 
-                        // User said "exclude from sum", usually means vertical totals, 
-                        // but let's also hide row total if it's completed for consistency.
                         hasValidNum = false;
                     } else {
-                        grid.cols.forEach((_, ci) => { if (!sumCols[ci]) checkAndAdd(grid.data[`${rIdx}-${ci}`]); });
+                        grid.cols.forEach((_, ci) => {
+                            // Exclude '세후 이자' from horizontal sum if needed? 
+                            // Usually "세후 이자" is a Result column, so maybe we keep it. 
+                            // But user request was "세후 이자 열에서는 합계값은 나오지 않게 해줘".
+                            // That implies Vertical columns totals.
+                            // Wait, if "세후 이자" is a column, then the question is about the vertical sum at the bottom.
+                            // So my change above handles it.
+                            if (!sumCols[ci]) checkAndAdd(grid.data[`${rIdx}-${ci}`]);
+                        });
                     }
                 } else if (sumRows[rIdx] && sumCols[cIdx]) {
+                    // Grand Total (Intersection)
                     grid.rows.forEach((_, ri) => {
                         const rowStatus = statusIdx > -1 ? grid.data[`${ri}-${statusIdx}`] : '';
                         if (!sumRows[ri] && rowStatus !== '완료') {
                             grid.cols.forEach((_, ci) => { if (!sumCols[ci]) checkAndAdd(grid.data[`${ri}-${ci}`]); });
                         }
                     });
+
+                    // If calculating grand total, should we exclude '세후 이자' column from the horizontal sum that feeds into it?
+                    // Usually yes if it's a derived value like Interest. 
+                    // But effectively if I block specific column summing, I should be careful.
+                    // The user ONLY asked "세후 이자 열에서는 합계값은 나오지 않게 해줘". 
+                    // This implies the cell at (Total Row, After-tax Interest Col) should be empty/dash.
+                    // My change in the first 'if' block handles that specific cell.
+
+                    // BUT what about the cell at (Total Row, Total Col)? i.e., Grand Total.
+                    // If 'After-tax Interest' is just a value (not formula), it might be part of the total.
+                    // However, typically Interest is income. 
+                    // Since I don't know if the user implies exclude from Grand Total, I will stick to "In the After-tax Interest column, do not show sum".
+
+                    // So checking cIdx against '세후 이자' covers the vertical sum cell.
+                    // Checking if cIdx is '세후 이자' covers the Investor Total rows too (handled in chunk 1).
+
+                    // We also need to check if we are in the '세후 이자' column here for Grand Total?
+                    // No, Grand Total is in 'Total' column.
+                    // If '세후 이자' is a column, then `sumCols[cIdx]` is false. So we fall into the first block.
+                    // If we ARE in a Sum Column (e.g. Total), we are in 2nd or 3rd block.
+
+                    // Wait, if cIdx is the 'Total' column, we are iterating `ci`.
+                    // If `grid.cols[ci]` is '세후 이자', should we include it in the horizontal sum?
+                    // User didn't ask to exclude it from row totals.
+                    // User asked "In the After-tax Interest COLUMN, don't show the total value".
+                    // This confirms my first edit is correct: disable the vertical sum for that column.
                 }
+
+                // Final check for the specific cell being rendered
+                const thisColName = (grid.cols[cIdx] || '').trim();
+                if (thisColName === '세후 이자' && sumRows[rIdx]) {
+                    hasValidNum = false;
+                }
+
                 val = hasValidNum ? formatMoneyFull(sum) : "-";
             }
 
@@ -216,6 +328,7 @@ function renderTable(blockId) {
                     style="background-color: ${finalBgString}22" onclick="this.querySelector('textarea')?.focus()">
                     <div class="cell-wrapper">
                         <textarea class="table-input ${isReadOnly ? 'font-bold text-blue-400' : ''} ${isCompleted ? 'row-completed' : ''}" rows="1" 
+                            style="${cellStyle}"
                             ${isReadOnly ? 'readonly' : `onchange="updateCell('${blockId}', ${rIdx}, ${cIdx}, this.value)"`}
                             onfocus="${isReadOnly ? 'this.blur()' : 'this.select()'}">${val}</textarea>
                     </div>
@@ -223,7 +336,122 @@ function renderTable(blockId) {
             }
         });
         html += `</tr>`;
+
+        // [New] Render Investor Sub-totals
+        if (sumRows[rIdx] && investorIdx > -1) {
+            const sortedInv = Object.keys(investorTotals).sort();
+            sortedInv.forEach(invName => {
+                const invColor = getColorForName(invName);
+                // Unique background per investor
+                const hStyle = rowHeights[rIdx] ? `height: ${rowHeights[rIdx]}px;` : '';
+                const rowStyle = `background-color: ${invColor}33; border-top: 1px dashed ${invColor}66; ${hStyle}`;
+                const textStyle = `color: ${invColor}; font-weight: bold;`;
+
+                html += `<tr style="${rowStyle}">`;
+
+                // Row Header
+                html += `<td class="p-0 border border-white/10 relative">
+                            <div class="cell-wrapper justify-center">
+                                <span class="text-sm font-bold" style="${textStyle}">↳ ${invName}</span>
+                            </div>
+                         </td>`;
+
+                grid.cols.forEach((_, cIdx) => {
+                    let disp = '-';
+                    const cName = (grid.cols[cIdx] || '').replace(/\s+/g, '');
+                    const isStatus = (grid.cols[cIdx] || '').trim() === '현황';
+
+                    if (cIdx === investorIdx) {
+                        disp = invName;
+                    } else if (cName === '세후이자' || isStatus) {
+                        disp = '-';
+                    } else if (investorTotals[invName] && investorTotals[invName][cIdx] !== undefined) {
+                        disp = formatMoneyFull(investorTotals[invName][cIdx]);
+                    }
+
+                    html += `<td class="p-0 border border-white/10 relative">
+                                <div class="cell-wrapper justify-center text-sm font-bold pr-2" style="justify-content: center; ${textStyle}">
+                                    ${disp}
+                                </div>
+                             </td>`;
+                });
+            });
+        }
     });
+
+    // [New] Render Completed Projects Summary
+    if (Object.keys(completedTotals.total).length > 0) {
+        // Find height of the main 'Total' row to match
+        const sumRowIdx = grid.rows.findIndex(r => r.includes('합계'));
+        const hStyle = (sumRowIdx > -1 && rowHeights[sumRowIdx]) ? `height: ${rowHeights[sumRowIdx]}px;` : '';
+
+        // 1. Total (Completed) Row
+        html += `<tr style="background-color: rgba(220, 38, 38, 0.15); border-top: 2px solid rgba(220, 38, 38, 0.3); ${hStyle}">`;
+
+        // Match existing Total row structure. usually first col is corner/header
+        // But here we are just appending cells. We need to match grid.cols layout.
+
+        // Row Header (First Cell)
+        html += `<td class="p-0 border border-white/10 relative">
+                    <div class="cell-wrapper justify-center">
+                        <span class="font-bold text-red-400">합계 (완료)</span>
+                    </div>
+                 </td>`;
+
+        grid.cols.forEach((_, cIdx) => {
+            const val = completedTotals.total[cIdx];
+            const disp = (val !== undefined) ? formatMoneyFull(val) : '-';
+
+            // Check for '세후이자' column or Status column
+            const cName = (grid.cols[cIdx] || '').replace(/\s+/g, '');
+            const isStatus = (grid.cols[cIdx] || '').trim() === '현황';
+            const finalDisp = (cName === '세후이자' || isStatus) ? '-' : disp;
+
+            html += `<td class="p-0 border border-white/10 relative">
+                        <div class="cell-wrapper justify-center font-bold text-red-300 pr-2" style="justify-content: center;">
+                            ${finalDisp}
+                        </div>
+                     </td>`;
+        });
+        html += `</tr>`;
+
+        // 2. Investor Totals (Completed)
+        const sortedInvComp = Object.keys(completedTotals.investors).sort();
+        sortedInvComp.forEach(invName => {
+            const invColor = getColorForName(invName);
+            // Use Red-tinted background mixed with investor color? Or just distinct
+            // User said: "Different color to distinguish".
+            // Let's use a darker/reddish version of the investor style.
+            // Blend investor color with red or just make it distinct.
+
+            const rowStyle = `background-color: rgba(60, 20, 20, 0.4); border-top: 1px dashed ${invColor}66; ${hStyle}`;
+            const textStyle = `color: ${invColor}; font-weight: bold; filter: brightness(0.9);`;
+
+            html += `<tr style="${rowStyle}">`;
+
+            html += `<td class="p-0 border border-white/10 relative">
+                        <div class="cell-wrapper justify-center">
+                            <span class="text-sm font-bold" style="${textStyle}">↳ ${invName} (완료)</span>
+                        </div>
+                      </td>`;
+
+            grid.cols.forEach((_, cIdx) => {
+                const val = completedTotals.investors[invName][cIdx];
+                const disp = (val !== undefined) ? formatMoneyFull(val) : '-';
+                const cName = (grid.cols[cIdx] || '').replace(/\s+/g, '');
+                const isStatus = (grid.cols[cIdx] || '').trim() === '현황';
+                const finalDisp = (cName === '세후이자' || isStatus) ? '-' : disp;
+
+                html += `<td class="p-0 border border-white/10 relative">
+                            <div class="cell-wrapper justify-center text-sm font-bold pr-2" style="justify-content: center; ${textStyle}">
+                                ${finalDisp}
+                            </div>
+                         </td>`;
+            });
+            html += `</tr>`;
+        });
+    }
+
     html += `</tbody>`;
 
     table.innerHTML = html;
