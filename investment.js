@@ -620,12 +620,24 @@ function autoFormatValue(val) {
     if (!raw) return '';
 
     // 1. Date Check (Simple 6 or 8 digit pure number)
+    // Only format as date if MM (1-12) and DD (1-31) are valid
     const pureDigits = raw.replace(/[^0-9]/g, '');
-    if (raw === pureDigits) {
+    if (raw === pureDigits && (pureDigits.length === 6 || pureDigits.length === 8)) {
+        let m, d;
         if (pureDigits.length === 8) {
-            return `${pureDigits.substring(0, 4)}.${pureDigits.substring(4, 6)}.${pureDigits.substring(6, 8)}`;
-        } else if (pureDigits.length === 6) {
-            return `${pureDigits.substring(0, 2)}.${pureDigits.substring(2, 4)}.${pureDigits.substring(4, 6)}`;
+            m = parseInt(pureDigits.substring(4, 6));
+            d = parseInt(pureDigits.substring(6, 8));
+        } else {
+            m = parseInt(pureDigits.substring(2, 4));
+            d = parseInt(pureDigits.substring(4, 6));
+        }
+
+        if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+            if (pureDigits.length === 8) {
+                return `${pureDigits.substring(0, 4)}.${pureDigits.substring(4, 6)}.${pureDigits.substring(6, 8)}`;
+            } else {
+                return `${pureDigits.substring(0, 2)}.${pureDigits.substring(2, 4)}.${pureDigits.substring(4, 6)}`;
+            }
         }
     }
 
