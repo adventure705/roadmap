@@ -754,16 +754,19 @@ function renderMonthlyTable() {
 
     const monthlyTotal = activeList.reduce((sum, item) => sum + item.values[curM], 0);
 
-    // Calc ColSpan for Total Row Label
-    // Cash: Date, Name, Cat, Card, Bank = 5
-    // Var: Name, Cat, Card, Bank = 4
-    // Income: Name, Cat, Bank = 3
-    // Fixed: Name, Cat, Bank = 3
     const labelColSpan = isCash ? 5 : ((isIncome || currentPageType === 'fixed') ? 3 : 4);
-    const totalCols = labelColSpan + 2; // + Amount + Manage
 
+    // Total Row (Top)
+    bodyHTML += `<tr class="bg-gray-800/80 font-bold border-b-2 border-white/10">`;
+    bodyHTML += `<td class="px-6 py-4 text-blue-300" colspan="${labelColSpan}">합계</td>`;
+    bodyHTML += `<td class="px-6 py-4 text-right text-yellow-400 text-xl">${formatMoneyFull(monthlyTotal)}원</td>`;
+    bodyHTML += `<td></td>`;
+    bodyHTML += `</tr>`;
+
+    // Calc ColSpan (moved total row up, now render loop)
     if (activeList.length === 0) {
-        bodyHTML = `<tr><td colspan="${totalCols}" class="px-6 py-8 text-center text-gray-500">이번 달 내역이 없습니다. (0원 항목 제외)</td></tr>`;
+        const totalCols = labelColSpan + 2;
+        bodyHTML += `<tr><td colspan="${totalCols}" class="px-6 py-8 text-center text-gray-500">이번 달 내역이 없습니다. (0원 항목 제외)</td></tr>`;
     } else {
         activeList.forEach((item, index) => {
             const val = item.values[curM];
@@ -853,12 +856,6 @@ function renderMonthlyTable() {
         });
     }
 
-    // Total Row
-    bodyHTML += `<tr class="bg-gray-800/80 font-bold border-t-2 border-white/10">`;
-    bodyHTML += `<td class="px-6 py-4 text-blue-300" colspan="${labelColSpan}">합계</td>`;
-    bodyHTML += `<td class="px-6 py-4 text-right text-yellow-400 text-xl">${formatMoneyFull(monthlyTotal)}원</td>`;
-    bodyHTML += `<td></td>`;
-    bodyHTML += `</tr>`;
 
     tbody.innerHTML = bodyHTML;
 }
