@@ -101,6 +101,18 @@ function renderTable(blockId) {
 
     const isAllSelected = grid.allSelected || false;
 
+    // Helper to determine if a column should be summed
+    const isSummableCol = (colName) => {
+        const raw = (colName || '').replace(/\s+/g, '');
+        if (raw === '세후이자') return false; // Explicit exclusion
+        if (raw === '현황') return false;
+        // Allow list: must contain money-related terms
+        if (raw.includes('금액') || raw.includes('원금') || raw.includes('비용') || raw.includes('수익') || raw.includes('배당') || raw.includes('입금')) {
+            return true;
+        }
+        return false;
+    };
+
     // [New] Investor Total Calculation
     const investorIdx = grid.cols.findIndex(c => c.trim() === '투자자');
     const investorTotals = {}; // Active Projects: { 'Name': { cIdx: sum } }
@@ -120,8 +132,8 @@ function renderTable(blockId) {
             // Calculate sums for all columns
             grid.cols.forEach((_, cIdx) => {
                 const colNameRaw = (grid.cols[cIdx] || '').replace(/\s+/g, ''); // Normalize spaces
-                // Skip if sum column OR if '세후이자'
-                if (!sumCols[cIdx] && colNameRaw !== '세후이자') {
+                // Skip if sum column OR not summable
+                if (!sumCols[cIdx] && isSummableCol(grid.cols[cIdx])) {
                     const raw = String(grid.data[`${rIdx}-${cIdx}`] || '').replace(/,/g, '');
                     const num = parseFloat(raw);
                     if (!isNaN(num)) {
@@ -231,6 +243,9 @@ function renderTable(blockId) {
                 let hasValidNum = false;
 
                 const checkAndAdd = (v) => {
+                    // Pre-check for column name validity in scope of cIdx
+                    if (!isSummableCol(grid.cols[cIdx])) return;
+
                     const raw = String(v || '').replace(/,/g, '').trim();
                     if (raw !== '' && !isNaN(parseFloat(raw))) {
                         sum += parseFloat(raw);
