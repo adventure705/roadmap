@@ -113,7 +113,7 @@ function renderSheetTable() {
     detailIncomeArr.forEach(item => {
         const cat = item.category || '';
         item.values.forEach((v, i) => {
-            if (cat === '이자수입') {
+            if (cat === '프로젝트 수입') {
                 calcIncomeFixed[i] += v;
             } else {
                 calcIncomeVariable[i] += v;
