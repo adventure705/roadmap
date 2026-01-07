@@ -1309,16 +1309,14 @@ function renderInstallmentDetails(itemId, monthIndex) {
     detailView.classList.remove('hidden');
 }
 
-// Copy Month Modal (Simplified for brevity, ensuring it exists)
 function openCopyMonthModal() {
     const modal = document.getElementById('copyMonthModal');
     if (modal) {
         modal.style.display = 'flex';
-        // ... Populate logic ...
         const yearSelect = document.getElementById('copyTargetYear');
-        if (yearSelect) yearSelect.innerHTML = Object.keys(roadmapData.years).map(y => `< option value = "${y}" ${y == currentYear ? 'selected' : ''}> ${y}년</option > `).join('');
+        if (yearSelect) yearSelect.innerHTML = Object.keys(roadmapData.years).map(y => `<option value="${y}" ${y == currentYear ? 'selected' : ''}>${y}년</option>`).join('');
         const monthSelect = document.getElementById('copyTargetMonth');
-        if (monthSelect) monthSelect.innerHTML = roadmapData.months.map((m, i) => `< option value = "${i}" ${i === (currentMonth + 1) % 12 ? 'selected' : ''}> ${m}</option > `).join('');
+        if (monthSelect) monthSelect.innerHTML = roadmapData.months.map((m, i) => `<option value="${i}" ${i === (currentMonth + 1) % 12 ? 'selected' : ''}>${m}</option>`).join('');
     }
 }
 function closeCopyMonthModal() { document.getElementById('copyMonthModal').style.display = 'none'; }
