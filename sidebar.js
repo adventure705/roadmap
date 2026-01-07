@@ -20,51 +20,13 @@ const defaultMenuConfig = [
 
 function getMenuConfig() {
     try {
-        // 우선순위: 1. roadmapData.sidebarConfig (메모리/서버 동기화 값)
-        //          2. localStorage (로컬 저장된 값)
-        //          3. defaultMenuConfig (기본값)
-
-        let config = null;
-        if (typeof roadmapData !== 'undefined' && roadmapData.sidebarConfig) {
-            config = roadmapData.sidebarConfig;
-        } else {
-            const saved = localStorage.getItem('sidebar_config');
-            if (saved) config = JSON.parse(saved);
+        if (typeof roadmapData !== 'undefined' && roadmapData.sidebarConfig && roadmapData.sidebarConfig.length > 0) {
+            return roadmapData.sidebarConfig;
         }
 
-        if (config) {
-            // New Item Migration Logic (Ensuring new items exist in old configs)
-            const checkAndAdd = (id, newItem, anchorId = null) => {
-                if (!config.find(item => item.id === id)) {
-                    const idx = anchorId ? config.findIndex(item => item.id === anchorId) : -1;
-                    if (idx !== -1) config.splice(idx + 1, 0, newItem);
-                    else config.push(newItem);
-                }
-            };
+        const saved = localStorage.getItem('sidebar_config');
+        if (saved) return JSON.parse(saved);
 
-            checkAndAdd('moneyPlan', { type: 'item', id: 'moneyPlan', label: '머니 플랜', icon: '💰', link: 'money_plan.html' }, 'roadmap');
-            checkAndAdd('settlement', { type: 'item', id: 'settlement', label: '지출 예정산', icon: '💰', link: 'settlement.html' }, 'cash');
-
-            if (!config.find(item => item.id === 'business')) {
-                config.push({ type: 'header', label: '사업 관리' });
-                config.push({ type: 'item', id: 'business', label: '사업 관리', icon: '💼', link: 'business.html' });
-            }
-
-            checkAndAdd('investment', { type: 'item', id: 'investment', label: '투자 수입', icon: '📈', link: 'investment.html' }, 'income');
-            checkAndAdd('secret_board', { type: 'item', id: 'secret_board', label: '시크릿 보드', icon: '🚩', link: 'secret_board.html' }, 'investment');
-
-            if (!config.find(item => item.id === 'management')) {
-                config.push({ type: 'header', label: '정보 관리' });
-                config.push({ type: 'item', id: 'management', label: '정보 관리', icon: '📋', link: 'management.html' });
-            }
-
-            // Sync back to roadmapData ONLY if it differs from the current global state
-            // and we are NOT in the middle of waiting for a cloud sync.
-            // Actually, we should avoid side-effects here. 
-            // The sidebar will be re-rendered via triggerUIUpdate() once cloud data arrives.
-
-            return config;
-        }
         return defaultMenuConfig;
     } catch (e) {
         console.error('Sidebar config load error:', e);

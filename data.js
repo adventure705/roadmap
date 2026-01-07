@@ -86,7 +86,25 @@ let roadmapData = {
     },
     dashboardSubtitle: "자산 흐름 요약",
     pageTitles: {},
-    sidebarConfig: null,
+    sidebarConfig: [
+        { type: 'item', id: 'dashboard', label: '대시보드', icon: '📊', link: 'dashboard.html' },
+        { type: 'item', id: 'roadmap', label: '단기 로드맵', icon: '📅', link: 'roadmap.html' },
+        { type: 'item', id: 'moneyPlan', label: '머니 플랜', icon: '💰', link: 'money_plan.html' },
+        { type: 'header', label: '지출 관리' },
+        { type: 'item', id: 'fixed', label: '고정 지출', icon: '🔒', link: 'fixed_expenses.html' },
+        { type: 'item', id: 'variable', label: '변동 지출', icon: '🛒', link: 'variable_expenses.html' },
+        { type: 'item', id: 'installments', label: '할부', icon: '💳', link: 'installments.html' },
+        { type: 'item', id: 'cash', label: '현금 지출', icon: '💸', link: 'cash_expenses.html' },
+        { type: 'item', id: 'settlement', label: '지출 예정산', icon: '💰', link: 'settlement.html' },
+        { type: 'header', label: '수입 관리' },
+        { type: 'item', id: 'income', label: '수입', icon: '💰', link: 'income.html' },
+        { type: 'item', id: 'investment', label: '투자 수입', icon: '📈', link: 'investment.html' },
+        { type: 'item', id: 'secret_board', label: '시크릿 보드', icon: '🚩', link: 'secret_board.html' },
+        { type: 'header', label: '사업 관리' },
+        { type: 'item', id: 'business', label: '사업 관리', icon: '💼', link: 'business.html' },
+        { type: 'header', label: '정보 관리' },
+        { type: 'item', id: 'management', label: '정보 관리', icon: '📋', link: 'management.html' }
+    ],
     updatedAt: 0
 };
 
@@ -259,13 +277,11 @@ function syncMemoryToCloud() {
         management: roadmapData.management || {},
         moneyPlan: roadmapData.moneyPlan || {},
         updatedAt: roadmapData.updatedAt || 0,
-        dashboardSubtitle: roadmapData.dashboardSubtitle || "자산 흐름 요약",
-        pageTitles: roadmapData.pageTitles || {}
+        pageTitles: roadmapData.pageTitles || {},
+        sidebarConfig: roadmapData.sidebarConfig || []
     };
 
-    if (roadmapData.sidebarConfig) {
-        dataToSave.sidebarConfig = roadmapData.sidebarConfig;
-    }
+    // sidebarConfig is already in dataToSave now
 
     db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave, { merge: true })
         .then(() => {
@@ -327,12 +343,37 @@ function processParsedData(parsed) {
     if (parsed.pageTitles) roadmapData.pageTitles = parsed.pageTitles;
     else roadmapData.pageTitles = {};
 
-    if (parsed.sidebarConfig) roadmapData.sidebarConfig = parsed.sidebarConfig;
-    else {
+    if (parsed.sidebarConfig) {
+        roadmapData.sidebarConfig = parsed.sidebarConfig;
+    } else {
         // Fallback to legacy sidebar_config if missing in supermoon_data
         const legacy = localStorage.getItem('sidebar_config');
         if (legacy) {
             try { roadmapData.sidebarConfig = JSON.parse(legacy); } catch (e) { }
+        }
+    }
+
+    // Migration for Sidebar: Ensure new items exist in loaded config
+    if (roadmapData.sidebarConfig) {
+        const config = roadmapData.sidebarConfig;
+        const checkAndAdd = (id, newItem, anchorId = null) => {
+            if (!config.find(item => item.id === id)) {
+                const idx = anchorId ? config.findIndex(item => item.id === anchorId) : -1;
+                if (idx !== -1) config.splice(idx + 1, 0, newItem);
+                else config.push(newItem);
+            }
+        };
+        checkAndAdd('moneyPlan', { type: 'item', id: 'moneyPlan', label: '머니 플랜', icon: '💰', link: 'money_plan.html' }, 'roadmap');
+        checkAndAdd('settlement', { type: 'item', id: 'settlement', label: '지출 예정산', icon: '💰', link: 'settlement.html' }, 'cash');
+        if (!config.find(item => item.id === 'business')) {
+            config.push({ type: 'header', label: '사업 관리' });
+            config.push({ type: 'item', id: 'business', label: '사업 관리', icon: '💼', link: 'business.html' });
+        }
+        checkAndAdd('investment', { type: 'item', id: 'investment', label: '투자 수입', icon: '📈', link: 'investment.html' }, 'income');
+        checkAndAdd('secret_board', { type: 'item', id: 'secret_board', label: '시크릿 보드', icon: '🚩', link: 'secret_board.html' }, 'investment');
+        if (!config.find(item => item.id === 'management')) {
+            config.push({ type: 'header', label: '정보 관리' });
+            config.push({ type: 'item', id: 'management', label: '정보 관리', icon: '📋', link: 'management.html' });
         }
     }
 
