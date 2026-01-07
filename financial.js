@@ -775,7 +775,11 @@ function renderMonthlyTable() {
             const currentCard = item.card || '';
             const currentDate = item.date || '';
 
-            bodyHTML += `<tr class="hover:bg-white/5 transition group border-b border-white/5" 
+            const catColor = (roadmapData.categoryColors && roadmapData.categoryColors[currentPageType]) ? roadmapData.categoryColors[currentPageType][currentCat] : '';
+            const rowStyle = catColor ? `style="background-color: ${catColor}33; border-left: 4px solid ${catColor};"` : 'class="border-b border-white/5"';
+
+            bodyHTML += `<tr ${rowStyle.startsWith('class') ? rowStyle : `style="${catColor ? `background-color: ${catColor}22;` : ''} border-left: 4px solid ${catColor || 'transparent'}; border-bottom: 1px solid rgba(255,255,255,0.05);"`} 
+                class="hover:bg-white/5 transition group" 
                 draggable="true" 
                 ondragstart="onRowDragStart(event, '${item.id}')" 
                 ondragover="onRowDragOver(event)" 
@@ -840,12 +844,7 @@ function renderMonthlyTable() {
             // ... (rest of management row contents) ...
             bodyHTML += `<button onclick="openAddItemModal('${item.id}')" class="text-blue-400 hover:text-white p-2 rounded-full hover:bg-white/10" title="수정">✎</button>`;
 
-            if (!sortState.column) {
-                if (index > 0) bodyHTML += `<button onclick="moveItem('${item.id}', -1)" class="text-gray-400 hover:text-white p-1 rounded hover:bg-white/10">▲</button>`;
-                else bodyHTML += `<span class="p-1 w-6"></span>`;
-                if (index < activeList.length - 1) bodyHTML += `<button onclick="moveItem('${item.id}', 1)" class="text-gray-400 hover:text-white p-1 rounded hover:bg-white/10">▼</button>`;
-                else bodyHTML += `<span class="p-1 w-6"></span>`;
-            } else {
+            if (sortState.column) {
                 bodyHTML += `<span class="text-xs text-gray-500 italic mr-2">정렬됨</span>`;
             }
 
