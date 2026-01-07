@@ -77,6 +77,28 @@ function resetMenuConfig() {
     }
 }
 
+window.checkGlobalLogin = function () {
+    const input = document.getElementById('globalLoginPassword');
+    const error = document.getElementById('globalLoginError');
+    if (!input) return;
+
+    if (input.value === '0705') {
+        sessionStorage.setItem('global_auth', 'true');
+        const overlay = document.getElementById('globalLoginOverlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 300);
+        }
+        document.body.style.overflow = ''; // Restore scroll
+    } else {
+        error.style.opacity = '1';
+        input.value = '';
+        input.classList.add('animate-pulse', 'border-red-500');
+        setTimeout(() => input.classList.remove('animate-pulse', 'border-red-500'), 500);
+        input.focus();
+    }
+};
+
 window.openSidebarManager = function () {
     const modal = document.getElementById('sidebarManagerModal');
     if (modal) {
@@ -157,9 +179,48 @@ function renderSidebar(activePage) {
         // 기존 사이드바와 관련 요소들 제거
         const existingMobileHeader = document.querySelector('.lg\\:hidden.fixed.top-0');
         const existingOverlay = document.getElementById('sidebarOverlay');
+        const existingAuth = document.getElementById('globalLoginOverlay');
         if (existingMobileHeader) existingMobileHeader.remove();
         if (existingSidebar) existingSidebar.remove();
         if (existingOverlay) existingOverlay.remove();
+        if (existingAuth) existingAuth.remove();
+    }
+
+    // Auth Overlay Logic
+    let authHTML = '';
+    if (!sessionStorage.getItem('global_auth')) {
+        authHTML = `
+        <div id="globalLoginOverlay" class="fixed inset-0 bg-[#0f172a] z-[9999] flex items-center justify-center transition-opacity duration-300">
+            <div class="bg-[#1e293b] p-8 rounded-2xl shadow-2xl border border-white/10 w-full max-w-sm text-center transform transition-all animate-in fade-in zoom-in duration-300">
+                <div class="mb-6 text-5xl animate-bounce">🔒</div>
+                <h2 class="text-2xl font-bold text-white mb-2">보안 접속</h2>
+                <p class="text-gray-400 mb-8 text-sm">페이지 접근을 위해 비밀번호를 입력하세요.</p>
+                
+                <div class="mb-6">
+                    <input type="password" id="globalLoginPassword" 
+                        class="w-full bg-[#0f172a] border border-white/10 rounded-xl px-4 py-3 text-white text-center text-lg tracking-[0.5em] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:tracking-normal placeholder:text-sm placeholder:text-gray-600"
+                        placeholder="비밀번호"
+                        onkeypress="if(event.key === 'Enter') checkGlobalLogin()"
+                        autocomplete="off"
+                    >
+                </div>
+                
+                <button onclick="checkGlobalLogin()" 
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95">
+                    접속하기
+                </button>
+                <p id="globalLoginError" class="text-red-400 text-xs mt-4 h-4 opacity-0 transition-opacity">비밀번호가 일치하지 않습니다.</p>
+            </div>
+            <script>
+                // Force focus
+                (function(){
+                    const inp = document.getElementById('globalLoginPassword');
+                    if(inp) { inp.focus(); }
+                })();
+            </script>
+        </div>
+        `;
+        document.body.style.overflow = 'hidden'; // Block scroll behind overlay
     }
 
     const config = getMenuConfig();
@@ -175,7 +236,7 @@ function renderSidebar(activePage) {
         }
     });
 
-    const sidebarHTML = `
+    const sidebarHTML = authHTML + `
     <!-- Mobile Header -->
     <div class="lg:hidden fixed top-0 left-0 right-0 h-14 bg-dark border-b border-white/5 flex items-center px-4 justify-between z-[60]">
         <div class="flex items-center">
