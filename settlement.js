@@ -277,10 +277,13 @@ function renderTransactionList(transactions) {
     // 1. Filter
     let displayItems = transactions;
     if (filterTxt) {
-        displayItems = transactions.filter(t =>
-            t.name.toLowerCase().includes(filterTxt) ||
-            (t.category && t.category.toLowerCase().includes(filterTxt))
-        );
+        displayItems = transactions.filter(t => {
+            const matchesName = t.name.toLowerCase().includes(filterTxt);
+            const matchesCat = (t.category && t.category.toLowerCase().includes(filterTxt));
+            const isUnclassifiedSearch = ("미분류").includes(filterTxt) || ("(미분류)").includes(filterTxt);
+            const matchesUnclassified = isUnclassifiedSearch && !t.category;
+            return matchesName || matchesCat || matchesUnclassified;
+        });
     }
 
     // Update Count Display
