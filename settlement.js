@@ -338,7 +338,10 @@ function renderTransactionList(transactions) {
                 <input type="checkbox" class="detail-check rounded bg-gray-700 border-gray-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" value="${t.id}">
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-gray-400 group-hover:text-white transition">${t.date}</td>
-            <td class="px-6 py-4 text-left font-medium text-white max-w-[200px] truncate" title="${t.name}">${t.name}</td>
+            <td class="px-6 py-4 text-left font-medium text-white max-w-[200px]">
+                <input type="text" class="w-full bg-transparent text-white focus:outline-none border-b border-transparent focus:border-blue-500 transition px-1"
+                    value="${t.name}" onblur="updateItemName('${t.id}', this.value)" title="${t.name}">
+            </td>
             <td class="px-6 py-4 text-right text-blue-300 font-bold group-hover:text-blue-200 transition">${formatMoneyFull(t.amount)}</td>
             <td class="px-6 py-4">
                 <select onchange="updateItemCategory('${t.id}', this.value)" 
@@ -443,6 +446,19 @@ function updateItemCategory(id, newCat) {
     if (item) {
         item.category = newCat;
         saveData();
+        updateSettlementUI();
+    }
+}
+
+function updateItemName(id, newVal) {
+    const yearData = roadmapData.years[currentYear];
+    if (!yearData || !yearData.details.settlement) return;
+
+    const item = yearData.details.settlement.find(t => t.id === id);
+    if (item) {
+        item.name = newVal;
+        saveData();
+        // UI 갱신 (메인 요약 및 리스트 필터링 결과 반영)
         updateSettlementUI();
     }
 }
