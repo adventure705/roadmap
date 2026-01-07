@@ -309,12 +309,21 @@ function deleteItem(id) {
     } else {
         // Yearly mode: Permanently delete
         if (!confirm('항목을 완전히 삭제하시겠습니까? 모든 월의 데이터가 사라집니다.')) return;
-        const idx = list.findIndex(item => item.id === id);
-        if (idx > -1) {
-            list.splice(idx, 1);
-            saveData();
-            updateUI();
+
+        if (currentPageType === 'installment') {
+            for (const y in roadmapData.years) {
+                const yearList = roadmapData.years[y].details['installment'] || [];
+                const idx = yearList.findIndex(it => it.id === id);
+                if (idx > -1) yearList.splice(idx, 1);
+            }
+        } else {
+            const idx = list.findIndex(item => item.id === id);
+            if (idx > -1) {
+                list.splice(idx, 1);
+            }
         }
+        saveData();
+        updateUI();
     }
 }
 
@@ -590,14 +599,19 @@ function confirmAddItem() {
 }
 
 function updateItemName(id, val) {
-    const yearData = roadmapData.years[currentYear];
-    const list = yearData.details[currentPageType];
-    const item = list.find(it => it.id === id);
-    if (item) {
-        item.name = val;
-        saveData();
-        // Update UI not strictly necessary for name if valid per-row, but good for consistency
+    if (currentPageType === 'installment') {
+        for (const y in roadmapData.years) {
+            const list = roadmapData.years[y].details['installment'] || [];
+            const item = list.find(it => it.id === id);
+            if (item) item.name = val;
+        }
+    } else {
+        const yearData = roadmapData.years[currentYear];
+        const list = yearData.details[currentPageType];
+        const item = list.find(it => it.id === id);
+        if (item) item.name = val;
     }
+    saveData();
 }
 
 function updateItemCategory(id, val) {
@@ -1742,14 +1756,20 @@ function addBusinessName() {
 }
 
 function updateRowColor(id, color) {
-    const yearData = roadmapData.years[currentYear];
-    const list = yearData.details[currentPageType];
-    const item = list.find(it => it.id === id);
-    if (item) {
-        item.rowColor = color;
-        saveData();
-        updateUI();
+    if (currentPageType === 'installment') {
+        for (const y in roadmapData.years) {
+            const list = roadmapData.years[y].details['installment'] || [];
+            const item = list.find(it => it.id === id);
+            if (item) item.rowColor = color;
+        }
+    } else {
+        const yearData = roadmapData.years[currentYear];
+        const list = yearData.details[currentPageType];
+        const item = list.find(it => it.id === id);
+        if (item) item.rowColor = color;
     }
+    saveData();
+    updateUI();
 }
 
 function editBusinessName(idx) {
@@ -1841,57 +1861,70 @@ function confirmAddInstallment() {
         totalInterest: scheduleRes.totalInterest
     };
 
-    const yearData = roadmapData.years[currentYear];
-    const list = yearData.details['installment'];
+    // 1. Group schedule by year
+    const yearToValues = {};
+    scheduleRes.schedule.forEach(step => {
+        const stepAbsMonth = step.monthIndex - 1;
+        const monthOffset = (startMonth - 1) + stepAbsMonth;
+        const targetYear = startYear + Math.floor(monthOffset / 12);
+        const targetMonthIdx = monthOffset % 12;
 
-    // Helper to map schedule to current year values
-    const mapScheduleToValues = (sched) => {
-        const values = new Array(12).fill(0);
-        sched.forEach(step => {
-            // Calc absolute month index from start
-            const stepAbsMonth = step.monthIndex - 1; // 0-based index relative to start
-
-            // Calc actual calendar year/month
-            // startMonth is 1-based.
-            // year offset = floor((startMonth - 1 + stepAbsMonth) / 12)
-            // month index (0-11) = (startMonth - 1 + stepAbsMonth) % 12
-
-            const monthOffset = (startMonth - 1) + stepAbsMonth;
-            const yOffset = Math.floor(monthOffset / 12);
-            const targetYear = startYear + yOffset;
-            const targetMonthIdx = monthOffset % 12;
-
-            if (targetYear === currentYear) {
-                values[targetMonthIdx] += step.payment;
-            }
-        });
-        return values;
-    };
-
-    const values = mapScheduleToValues(scheduleRes.schedule);
-
-    if (editId) {
-        // Update
-        const item = list.find(it => it.id === editId);
-        if (item) {
-            item.name = name;
-            item.card = card;
-            item.installmentInfo = installmentInfo;
-            item.values = values;
+        if (!yearToValues[targetYear]) {
+            yearToValues[targetYear] = new Array(12).fill(0);
         }
-    } else {
-        // Create
-        const newItem = {
-            id: Date.now().toString(),
-            name: name,
-            category: '할부', // Default category
-            card: card,
-            bankAccount: '',
-            values: values,
-            installmentInfo: installmentInfo
-        };
-        list.push(newItem);
+        yearToValues[targetYear][targetMonthIdx] += step.payment;
+    });
+
+    const finalId = editId || Date.now().toString();
+
+    // 2. Identify all years that need sync (newly affected + existingly affected)
+    const affectedYears = new Set(Object.keys(yearToValues).map(Number));
+    for (const y in roadmapData.years) {
+        const yearInt = parseInt(y);
+        const list = roadmapData.years[yearInt].details['installment'] || [];
+        if (list.some(it => it.id === finalId)) {
+            affectedYears.add(yearInt);
+        }
     }
+
+    // 3. Sync across all affected years
+    affectedYears.forEach(y => {
+        // Create year data if it doesn't exist but has payments
+        if (!roadmapData.years[y] && yearToValues[y]) {
+            roadmapData.years[y] = roadmapData.createYearData();
+        }
+        if (!roadmapData.years[y]) return;
+
+        const list = roadmapData.years[y].details['installment'];
+        let item = list.find(it => it.id === finalId);
+
+        if (yearToValues[y]) {
+            // This year has installment payments
+            if (!item) {
+                item = {
+                    id: finalId,
+                    name: name,
+                    category: '할부',
+                    card: card,
+                    bankAccount: '',
+                    values: yearToValues[y],
+                    installmentInfo: installmentInfo
+                };
+                list.push(item);
+            } else {
+                item.name = name;
+                item.card = card;
+                item.installmentInfo = installmentInfo;
+                item.values = yearToValues[y];
+            }
+        } else {
+            // This year no longer has payments (due to edit date/months change)
+            const idx = list.findIndex(it => it.id === finalId);
+            if (idx > -1) {
+                list.splice(idx, 1);
+            }
+        }
+    });
 
     saveData();
     closeInstallmentModal();
