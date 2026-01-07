@@ -147,7 +147,11 @@ function renderTable(blockId) {
     };
 
     // Identify Sum Rows/Cols
-    const sumRows = grid.rows.map(r => r.includes('합계'));
+    const sumRows = grid.rows.map((r, i) => {
+        if (r.includes('합계')) return true;
+        if (blockId === 'block2' && i === 0) return true; // Block 2's first row is always a summary
+        return false;
+    });
     const sumCols = grid.cols.map(c => c.includes('합계'));
 
     const colWidths = grid.colWidths || [];
@@ -159,9 +163,12 @@ function renderTable(blockId) {
     // Helper to determine if a column should be summed
     const isSummableCol = (colName) => {
         const raw = (colName || '').replace(/\s+/g, '');
-        if (raw === '세후이자') return false;
+        if (raw === '세후이자') return false; 
         if (raw === '현황') return false;
         if (raw.includes('율') || raw.includes('비율')) return false; // Percentage/Interest Rate
+        
+        // Block 2: Treat almost everything numeric as summable except specific exclusions
+        if (blockId === 'block2') return true;
 
         const keywords = ['금액', '원금', '비용', '수익', '배당', '입금', '이자', '세전', '납입', '수령', '합계', '잔액', '현금', '자산'];
         return keywords.some(k => raw.includes(k));
@@ -615,28 +622,30 @@ function autoResize(el) {
     el.style.height = el.scrollHeight + 'px';
 }
 
-function autoFormatValue(val) {
+function autoFormatValue(val, blockId) {
     const raw = String(val).trim();
     if (!raw) return '';
 
     // 1. Date Check (Simple 6 or 8 digit pure number)
-    // Only format as date if MM (1-12) and DD (1-31) are valid
-    const pureDigits = raw.replace(/[^0-9]/g, '');
-    if (raw === pureDigits && (pureDigits.length === 6 || pureDigits.length === 8)) {
-        let m, d;
-        if (pureDigits.length === 8) {
-            m = parseInt(pureDigits.substring(4, 6));
-            d = parseInt(pureDigits.substring(6, 8));
-        } else {
-            m = parseInt(pureDigits.substring(2, 4));
-            d = parseInt(pureDigits.substring(4, 6));
-        }
-
-        if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+    // Only format as date if not block2 and MM (1-12) and DD (1-31) are valid
+    if (blockId !== 'block2') {
+        const pureDigits = raw.replace(/[^0-9]/g, '');
+        if (raw === pureDigits && (pureDigits.length === 6 || pureDigits.length === 8)) {
+            let m, d;
             if (pureDigits.length === 8) {
-                return `${pureDigits.substring(0, 4)}.${pureDigits.substring(4, 6)}.${pureDigits.substring(6, 8)}`;
+                m = parseInt(pureDigits.substring(4, 6));
+                d = parseInt(pureDigits.substring(6, 8));
             } else {
-                return `${pureDigits.substring(0, 2)}.${pureDigits.substring(2, 4)}.${pureDigits.substring(4, 6)}`;
+                m = parseInt(pureDigits.substring(2, 4));
+                d = parseInt(pureDigits.substring(4, 6));
+            }
+
+            if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+                if (pureDigits.length === 8) {
+                    return `${pureDigits.substring(0, 4)}.${pureDigits.substring(4, 6)}.${pureDigits.substring(6, 8)}`;
+                } else {
+                    return `${pureDigits.substring(0, 2)}.${pureDigits.substring(2, 4)}.${pureDigits.substring(4, 6)}`;
+                }
             }
         }
     }
@@ -737,7 +746,7 @@ function updateCell(blockId, rIdx, cIdx, value) {
 
     // Auto Format (Exclude status column from money formatting)
     const statusIdx = grid.cols.findIndex(c => c.trim() === '현황');
-    const formatted = (statusIdx === cIdx) ? value : autoFormatValue(value);
+    const formatted = (statusIdx === cIdx) ? value : autoFormatValue(value, blockId);
     grid.data[`${rIdx}-${cIdx}`] = formatted;
 
     if (statusIdx === cIdx) {
