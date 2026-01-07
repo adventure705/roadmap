@@ -1265,6 +1265,8 @@ function renderInstallmentDetails(itemId, monthIndex) {
     }
 
     const info = item.installmentInfo;
+    const totalPayment = (info.total || 0) + (info.totalInterest || 0);
+
     // Migration: If schedule is missing, generate it now
     if (!info.schedule) {
         info.schedule = calcInstallmentSchedule(info.total, info.months, info.rate, info.type).schedule;
@@ -1273,11 +1275,12 @@ function renderInstallmentDetails(itemId, monthIndex) {
     const clickMonthTitle = (monthIndex === -1) ? '전체 요약' : `${currentYear}년 ${monthIndex + 1}월 상세`;
     detailTitle.innerText = `${item.name} - ${clickMonthTitle} `;
 
-    let html = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-800 rounded-lg">
+    let html = `<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4 p-4 bg-gray-800 rounded-lg">
         <div><span class="block text-gray-500 text-xs">카드사</span><span class="font-bold text-blue-300">${item.card}</span></div>
-        <div><span class="block text-gray-500 text-xs">총 할부금액</span><span class="font-bold text-white">${formatMoneyFull(info.total)}원</span></div>
+        <div><span class="block text-gray-500 text-xs">총 할부원금</span><span class="font-bold text-white">${formatMoneyFull(info.total)}원</span></div>
+        <div><span class="block text-gray-500 text-xs">총 이자액</span><span class="font-bold text-yellow-500">${formatMoneyFull(info.totalInterest)}원</span></div>
+        <div><span class="block text-gray-500 text-xs">총 납부금액</span><span class="font-bold text-red-400">${formatMoneyFull(totalPayment)}원</span></div>
         <div><span class="block text-gray-500 text-xs">할부 조건</span><span class="font-bold text-green-400">${info.type === 'free' ? '무이자' : `${info.months}개월 (${info.rate}%)`}</span></div>
-        <div><span class="block text-gray-500 text-xs">총 이자</span><span class="font-bold text-yellow-500">${formatMoneyFull(info.totalInterest)}원</span></div>
     </div>`;
 
     // Specific Month Detail
@@ -1367,9 +1370,17 @@ function updateInstallmentStep(itemId, absMonthIndex, field, value) {
             if (step) {
                 step[field] = numVal;
                 step.payment = step.principal + step.interest;
-                // Note: We don't automatically recalculate the entire balanceAfter chain 
-                // because the user is manually overriding specific steps.
             }
+
+            // Recalculate totals
+            let newTotalInterest = 0;
+            let newTotalPrincipal = 0;
+            info.schedule.forEach(s => {
+                newTotalInterest += s.interest;
+                newTotalPrincipal += s.principal;
+            });
+            info.totalInterest = newTotalInterest;
+            info.total = newTotalPrincipal;
 
             // Sync the values array for THIS year
             const startYear = parseInt(info.startYear);
