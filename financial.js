@@ -929,7 +929,12 @@ function renderYearlyTable() {
     list.forEach(item => {
         const itemTotal = sum(item.values);
         const rowStyle = item.rowColor ? `background-color: ${item.rowColor};` : '';
-        bodyHTML += `<tr class="hover:bg-white/5 transition group" style="${rowStyle}">`;
+        bodyHTML += `<tr class="hover:bg-white/5 transition group" style="${rowStyle}" 
+            draggable="true" 
+            ondragstart="onRowDragStart(event, '${item.id}')" 
+            ondragover="onRowDragOver(event)" 
+            ondrop="onRowDrop(event, '${item.id}')"
+            ondragend="this.classList.remove('opacity-50')">`;
 
         let nameHtml = `<input type="text" class="w-full bg-transparent text-white font-medium focus:outline-none border-b border-transparent focus:border-blue-500"
     value="${item.name}" onblur="updateItemName('${item.id}', this.value)">`;
@@ -944,16 +949,22 @@ function renderYearlyTable() {
             const businesses = roadmapData.businessNames || [];
             // 2. Business Name (Sticky needs row color)
             bodyHTML += `<td class="p-2 min-w-[120px] sticky left-0 bg-card z-10 border-r border-white/10" style="${rowStyle}">
-                <select class="w-full bg-gray-900 border border-gray-700 text-white text-xs rounded p-1 business-name-select"
-                    onchange="updateItemBusinessName('${item.id}', this.value)">
-                    <option value="">(직접 입력/선택)</option>
-                    ${businesses.map(b => `<option value="${b}" ${b === item.businessName ? 'selected' : ''}>${b}</option>`).join('')}
-                </select>
+                <div class="flex items-center gap-1">
+                    <span class="cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300 p-1 select-none opacity-0 group-hover:opacity-100 transition">⠿</span>
+                    <select class="w-full bg-gray-900 border border-gray-700 text-white text-xs rounded p-1 business-name-select"
+                        onchange="updateItemBusinessName('${item.id}', this.value)">
+                        <option value="">(직접 입력/선택)</option>
+                        ${businesses.map(b => `<option value="${b}" ${b === item.businessName ? 'selected' : ''}>${b}</option>`).join('')}
+                    </select>
+                </div>
             </td>`;
         } else {
             // 1. Name (Sticky)
             bodyHTML += `<td class="p-2 min-w-[150px] sticky left-0 bg-card z-10 border-r border-white/10" style="${rowStyle}">
-            ${nameHtml}
+                <div class="flex items-center gap-1">
+                    <span class="cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300 p-1 select-none opacity-0 group-hover:opacity-100 transition">⠿</span>
+                    ${nameHtml}
+                </div>
             </td>`;
         }
 
@@ -1067,8 +1078,10 @@ function renderYearlyTable() {
             bodyHTML += `<button onclick="openInstallmentModal('${item.id}')" class="text-blue-400 hover:text-blue-300 opacity-0 group-hover:opacity-100 transition p-1">✎</button>`;
         }
         // Move Buttons
-        bodyHTML += `<button onclick="moveItem('${item.id}', -1)" class="text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition p-1 text-xs">▲</button>`;
-        bodyHTML += `<button onclick="moveItem('${item.id}', 1)" class="text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition p-1 text-xs">▼</button>`;
+        if (!isBusiness) {
+            bodyHTML += `<button onclick="moveItem('${item.id}', -1)" class="text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition p-1 text-xs">▲</button>`;
+            bodyHTML += `<button onclick="moveItem('${item.id}', 1)" class="text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition p-1 text-xs">▼</button>`;
+        }
 
         // Row Color Picker (Hex support)
         const rColor = item.rowColor || '#1f2937';
