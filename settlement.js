@@ -277,7 +277,10 @@ function renderTransactionList(transactions) {
     // 1. Filter
     let displayItems = transactions;
     if (filterTxt) {
-        displayItems = transactions.filter(t => t.name.toLowerCase().includes(filterTxt));
+        displayItems = transactions.filter(t =>
+            t.name.toLowerCase().includes(filterTxt) ||
+            (t.category && t.category.toLowerCase().includes(filterTxt))
+        );
     }
 
     // Update Count Display
