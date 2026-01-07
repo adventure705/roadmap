@@ -41,9 +41,10 @@
             color: inherit;
             border: 1px solid transparent;
             border-radius: 4px;
-            padding: 4px;
+            padding: 2px 4px;
             font-family: 'Pretendard', sans-serif;
             font-variant-numeric: tabular-nums;
+            font-size: 0.875rem;
         }
 
         .table-input:hover {
@@ -133,10 +134,13 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Fixed Expenses Summary Container (Moved here) -->
+                        <div id="fixedSummaryContainer" class="mt-2 mb-2 hidden grid grid-cols-1 md:grid-cols-3 gap-4">
+                        </div>
+
                         <!-- Memo Container -->
                         <div id="memoContainer" class="mt-1"></div>
-                        <!-- Fixed Expenses Summary Container -->
-                        <div id="fixedSummaryContainer" class="mt-4 hidden grid grid-cols-1 md:grid-cols-3 gap-4"></div>
                     </div>
 
                     <div>
@@ -246,13 +250,7 @@
                         <!-- Populated by JS -->
                     </select>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-1">카드</label>
-                    <select id="addItemCard"
-                        class="bg-gray-800 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                        <!-- Populated by JS -->
-                    </select>
-                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-400 mb-1">출금계좌</label>
                     <select id="addItemBank"

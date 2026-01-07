@@ -381,6 +381,39 @@ function swapItemsInList(list, id1, id2) {
 
 
 
+// Drag and Drop for Rows
+let draggedRowId = null;
+
+window.onRowDragStart = function (e, id) {
+    draggedRowId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.target.classList.add('opacity-50');
+};
+
+window.onRowDragOver = function (e) {
+    if (e.preventDefault) e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+};
+
+window.onRowDrop = function (e, targetId) {
+    if (e.stopPropagation) e.stopPropagation();
+    if (draggedRowId !== targetId) {
+        const yearData = roadmapData.years[currentYear];
+        const list = yearData.details[currentPageType];
+        const idx1 = list.findIndex(it => it.id === draggedRowId);
+        const idx2 = list.findIndex(it => it.id === targetId);
+        if (idx1 > -1 && idx2 > -1) {
+            const temp = list[idx1];
+            list.splice(idx1, 1);
+            list.splice(idx2, 0, temp);
+            saveData();
+            updateUI();
+        }
+    }
+    return false;
+};
+
 // --- Add Item Modal (Monthly Mode) ---
 function openAddItemModal(itemId = null) {
     const modal = document.getElementById('addItemModal');
@@ -658,10 +691,10 @@ function renderMonthlyTable() {
     }
 
     headerHTML += `
-        <th class="px-6 py-4 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('name')">
+        <th class="px-6 py-2 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('name')">
             항목명 ${getSortIndicator('name')}
         </th>
-        <th class="px-6 py-4 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('category')">
+        <th class="px-6 py-2 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('category')">
             분류 ${getSortIndicator('category')}
         </th>`;
 
@@ -673,13 +706,13 @@ function renderMonthlyTable() {
     }
 
     headerHTML += `
-        <th class="px-6 py-4 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('bankAccount')">
+        <th class="px-6 py-2 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('bankAccount')">
             ${isIncome ? '입금계좌' : '출금계좌'} ${getSortIndicator('bankAccount')}
         </th>
-        <th class="px-6 py-4 bg-gray-800 text-right w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('amount')">
+        <th class="px-6 py-2 bg-gray-800 text-right w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('amount')">
             금액 (${(curM + 1)}월) ${getSortIndicator('amount')}
         </th>
-        <th class="px-6 py-4 bg-gray-800 text-center w-[140px]">관리</th>
+        <th class="px-6 py-2 bg-gray-800 text-center w-[140px]">관리</th>
     `;
     thead.innerHTML = headerHTML;
 
@@ -739,7 +772,11 @@ function renderMonthlyTable() {
             const currentCard = item.card || '';
             const currentDate = item.date || '';
 
-            bodyHTML += `<tr class="hover:bg-white/5 transition group border-b border-white/5">`;
+            bodyHTML += `<tr class="hover:bg-white/5 transition group border-b border-white/5" 
+                draggable="true" 
+                ondragstart="onRowDragStart(event, '${item.id}')" 
+                ondragover="onRowDragOver(event)" 
+                ondrop="onRowDrop(event, '${item.id}')">`;
 
             // Date (if cash)
             if (isCash) {
@@ -750,14 +787,14 @@ function renderMonthlyTable() {
             }
 
             // Name
-            bodyHTML += `<td class="px-6 py-3">
-        <input type="text" class="w-full bg-transparent text-white font-medium focus:outline-none focus:border-b focus:border-blue-500 transition px-1 py-1"
+            bodyHTML += `<td class="px-6 py-1">
+        <input type="text" class="w-full bg-transparent text-white font-medium focus:outline-none focus:border-b focus:border-blue-500 transition px-1 py-0.5"
             value="${item.name}" onblur="updateItemName('${item.id}', this.value)" placeholder="항목 이름">
         </td>`;
 
             // Category (Select)
-            bodyHTML += `<td class="px-6 py-3">
-        <select class="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+            bodyHTML += `<td class="px-6 py-1">
+        <select class="bg-gray-900 border border-gray-700 text-white text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5"
             onchange="updateItemCategory('${item.id}', this.value)">
             <option value="" disabled ${!currentCat ? 'selected' : ''}>선택</option>
             ${(roadmapData.categories[currentPageType] || []).map(c => `<option value="${c}" ${c === currentCat ? 'selected' : ''}>${c}</option>`).join('')}
@@ -766,8 +803,8 @@ function renderMonthlyTable() {
 
             // Card (Select) - Skip for Income and Fixed
             if (!isIncome && currentPageType !== 'fixed') {
-                bodyHTML += `<td class="px-6 py-3">
-            <select class="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                bodyHTML += `<td class="px-6 py-1">
+            <select class="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5"
                 onchange="updateItemCard('${item.id}', this.value)">
                 <option value="" disabled ${!currentCard ? 'selected' : ''}>선택</option>
                 ${(roadmapData.cards[currentPageType] || []).map(c => `<option value="${c}" ${c === currentCard ? 'selected' : ''}>${c}</option>`).join('')}
@@ -776,8 +813,8 @@ function renderMonthlyTable() {
             }
 
             // Bank Account (Select)
-            bodyHTML += `<td class="px-6 py-3">
-        <select class="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+            bodyHTML += `<td class="px-6 py-1">
+        <select class="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5"
             onchange="updateItemBankAccount('${item.id}', this.value)">
             <option value="" disabled ${!currentBank ? 'selected' : ''}>선택</option>
             ${(roadmapData.bankAccounts[currentPageType] || []).map(b => `<option value="${b}" ${b === currentBank ? 'selected' : ''}>${b}</option>`).join('')}
@@ -785,15 +822,15 @@ function renderMonthlyTable() {
          </td>`;
 
             // Value (Current MonthOnly)
-            bodyHTML += `<td class="px-6 py-3">
-        <input type="text" class="table-input text-lg font-bold text-white bg-gray-900/50 rounded-lg px-3 py-2" value="${formatMoneyFull(val)}"
+            bodyHTML += `<td class="px-6 py-1">
+        <input type="text" class="table-input text-lg font-bold text-white bg-gray-900/50 rounded-lg px-2 py-1" value="${formatMoneyFull(val)}"
             onfocus="this.value = this.value.replace(/,/g, '')"
             onblur="updateItemValue('${item.id}', ${curM}, this.value)"
             onkeydown="if(event.key === 'Enter') this.blur();">
         </td>`;
 
             // Manage Buttons (Move & Delete & Edit)
-            bodyHTML += `<td class="px-6 py-3">
+            bodyHTML += `<td class="px-6 py-1">
                 <div class="cell-wrapper">
                     <div class="flex items-center justify-center gap-1">`;
 
