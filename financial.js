@@ -1866,7 +1866,7 @@ function confirmAddInstallment() {
     scheduleRes.schedule.forEach(step => {
         const stepAbsMonth = step.monthIndex - 1;
         const monthOffset = (startMonth - 1) + stepAbsMonth;
-        const targetYear = startYear + Math.floor(monthOffset / 12);
+        const targetYear = String(startYear + Math.floor(monthOffset / 12));
         const targetMonthIdx = monthOffset % 12;
 
         if (!yearToValues[targetYear]) {
@@ -1876,14 +1876,14 @@ function confirmAddInstallment() {
     });
 
     const finalId = editId || Date.now().toString();
+    console.log(`[InstallmentSync] ID: ${finalId}, Years:`, Object.keys(yearToValues));
 
     // 2. Identify all years that need sync (newly affected + existingly affected)
-    const affectedYears = new Set(Object.keys(yearToValues).map(Number));
+    const affectedYears = new Set(Object.keys(yearToValues));
     for (const y in roadmapData.years) {
-        const yearInt = parseInt(y);
-        const list = roadmapData.years[yearInt].details['installment'] || [];
+        const list = roadmapData.years[y].details['installment'] || [];
         if (list.some(it => it.id === finalId)) {
-            affectedYears.add(yearInt);
+            affectedYears.add(y);
         }
     }
 
@@ -1891,6 +1891,7 @@ function confirmAddInstallment() {
     affectedYears.forEach(y => {
         // Create year data if it doesn't exist but has payments
         if (!roadmapData.years[y] && yearToValues[y]) {
+            console.log(`[InstallmentSync] Creating new year object for ${y}`);
             roadmapData.years[y] = roadmapData.createYearData();
         }
         if (!roadmapData.years[y]) return;
@@ -1901,6 +1902,7 @@ function confirmAddInstallment() {
         if (yearToValues[y]) {
             // This year has installment payments
             if (!item) {
+                console.log(`[InstallmentSync] Adding to year ${y}`);
                 item = {
                     id: finalId,
                     name: name,
@@ -1912,6 +1914,7 @@ function confirmAddInstallment() {
                 };
                 list.push(item);
             } else {
+                console.log(`[InstallmentSync] Updating year ${y}`);
                 item.name = name;
                 item.card = card;
                 item.installmentInfo = installmentInfo;
@@ -1919,6 +1922,7 @@ function confirmAddInstallment() {
             }
         } else {
             // This year no longer has payments (due to edit date/months change)
+            console.log(`[InstallmentSync] Removing from year ${y} (no more payments)`);
             const idx = list.findIndex(it => it.id === finalId);
             if (idx > -1) {
                 list.splice(idx, 1);
