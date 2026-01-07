@@ -730,7 +730,8 @@ function processRawExcelData(rows) {
         // Find Indexes
         const d = rowStr.findIndex(c => c.includes('이용일') || c.includes('날짜'));
         const desc = rowStr.findIndex(c => c.includes('이용가맹점') || c === '가맹점명' || c.includes('거래내용'));
-        const amt = rowStr.findIndex(c => c.includes('결제 원금') || c.includes('결제원금') || c.includes('이용금액'));
+        let amt = rowStr.findIndex(c => c.includes('결제 원금') || c.includes('결제원금'));
+        if (amt === -1) amt = rowStr.findIndex(c => c.includes('이용금액'));
 
         if (d !== -1 && desc !== -1 && amt !== -1) {
             dateIdx = d;
@@ -752,7 +753,7 @@ function processRawExcelData(rows) {
         }
     }
 
-    alert('엑셀 형식을 인식하지 못했습니다. ("이용일", "이용가맹점", "결제 원금" 컬럼이 필요합니다.)\n확인된 헤더가 없습니다.');
+    alert('엑셀 형식을 인식하지 못했습니다. ("이용일", "이용가맹점", "결제원금" 또는 "이용금액" 컬럼이 필요합니다.)\n확인된 헤더가 없습니다.');
 }
 
 function parseRows(dataRows, dIdx, tIdx, aIdx) {
