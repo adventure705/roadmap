@@ -404,18 +404,22 @@ window.renderMemos = function (containerId = 'memoContainer') {
     }
     html += '</div></div>';
 
-    // 2. Monthly Memo (Exclude some types)
-    if (currentPageType !== 'installment' && currentPageType !== 'business' && currentPageType !== 'investment' && currentPageType !== 'roadmap' && currentPageType !== 'management' && currentPageType !== 'secret_board' && currentPageType !== 'moneyPlan') {
-        const monthKey = roadmapData.months[currentMonth];
-        const monthlyMemosMap = yearData.monthlyMemos || {};
+    // 2. Monthly Memo
+    // Allow monthly memos for more tabs
+    const validMonthlyTabs = ['fixed', 'variable', 'income', 'cash', 'installment', 'settlement', 'business', 'investment', 'roadmap', 'management', 'secret_board', 'moneyPlan'];
+    if (validMonthlyTabs.includes(currentPageType)) {
+        const monthlyMemosMap = yearData.monthlyMemos || [];
+        const memosForMonth = monthlyMemosMap[currentMonth] || {};
         let monthlyMemos = [];
-        const memosForMonth = monthlyMemosMap[monthKey];
+
         if (Array.isArray(memosForMonth)) {
+            // Legacy support or fallback
             monthlyMemos = memosForMonth;
-        } else if (memosForMonth && typeof memosForMonth === 'object') {
+        } else if (typeof memosForMonth === 'object') {
             monthlyMemos = memosForMonth[currentPageType] || [];
         }
 
+        const monthKey = roadmapData.months[currentMonth];
         html += `
         <div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 flex-1 min-w-0 lg:min-w-[300px]">
             <div class="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
@@ -483,13 +487,18 @@ window.addMemo = function (type) {
             roadmapData.commonMemos.push({ id: Date.now().toString(), text: text });
         } else {
             const yearData = roadmapData.years[currentYear];
-            const monthKey = roadmapData.months[currentMonth];
-            if (!yearData.monthlyMemos[monthKey]) yearData.monthlyMemos[monthKey] = {};
-            if (Array.isArray(yearData.monthlyMemos[monthKey])) {
-                yearData.monthlyMemos[monthKey] = { [currentPageType]: [] };
+            if (!yearData.monthlyMemos[currentMonth]) yearData.monthlyMemos[currentMonth] = {};
+            let monthObj = yearData.monthlyMemos[currentMonth];
+
+            if (Array.isArray(monthObj)) {
+                // If it's a legacy array, convert it to an object with the current type
+                const oldArr = [...monthObj];
+                monthObj = { [currentPageType]: oldArr };
+                yearData.monthlyMemos[currentMonth] = monthObj;
             }
-            if (!yearData.monthlyMemos[monthKey][currentPageType]) yearData.monthlyMemos[monthKey][currentPageType] = [];
-            yearData.monthlyMemos[monthKey][currentPageType].push({ id: Date.now().toString(), text: text });
+
+            if (!monthObj[currentPageType]) monthObj[currentPageType] = [];
+            monthObj[currentPageType].push({ id: Date.now().toString(), text: text });
         }
         saveData();
         renderMemos();
@@ -501,8 +510,8 @@ window.editMemo = function (type, idx) {
     if (type === 'common') {
         list = (roadmapData.commonMemos && !Array.isArray(roadmapData.commonMemos)) ? roadmapData.commonMemos[currentPageType] : roadmapData.commonMemos;
     } else {
-        const monthKey = roadmapData.months[currentMonth];
-        list = roadmapData.years[currentYear].monthlyMemos[monthKey][currentPageType];
+        const monthObj = roadmapData.years[currentYear].monthlyMemos[currentMonth];
+        list = (monthObj && monthObj[currentPageType]) ? monthObj[currentPageType] : [];
     }
     let itemIdx = (typeof idx === 'string') ? list.findIndex(it => (typeof it === 'object' ? it.id === idx : false)) : idx;
     if (itemIdx === -1 && typeof idx === 'string' && !isNaN(parseInt(idx))) itemIdx = parseInt(idx);
@@ -526,8 +535,8 @@ window.deleteMemo = function (type, idx) {
     if (type === 'common') {
         list = (roadmapData.commonMemos && !Array.isArray(roadmapData.commonMemos)) ? roadmapData.commonMemos[currentPageType] : roadmapData.commonMemos;
     } else {
-        const monthKey = roadmapData.months[currentMonth];
-        list = roadmapData.years[currentYear].monthlyMemos[monthKey][currentPageType];
+        const monthObj = roadmapData.years[currentYear].monthlyMemos[currentMonth];
+        list = (monthObj && monthObj[currentPageType]) ? monthObj[currentPageType] : [];
     }
     let itemIdx = (typeof idx === 'string') ? list.findIndex(it => (typeof it === 'object' ? it.id === idx : false)) : idx;
     if (itemIdx === -1 && typeof idx === 'string' && !isNaN(parseInt(idx))) itemIdx = parseInt(idx);

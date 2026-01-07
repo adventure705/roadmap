@@ -55,7 +55,10 @@ let roadmapData = {
         installment: ['현대카드', '삼성카드'],
         settlement: ['현대카드', '삼성카드']
     },
-    commonMemos: { fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [] },
+    commonMemos: {
+        fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [],
+        business: [], investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: []
+    },
     categoryOperators: {},
     categoryColors: {},
     businessNames: [],
@@ -479,7 +482,8 @@ roadmapData.createYearData = () => ({
         rules: {}
     },
     monthlyMemos: Array.from({ length: 12 }, () => ({
-        fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: []
+        fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: [],
+        investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: []
     })),
     moneyPlan: {
         plan: { reserve: {}, monthly: {} },
