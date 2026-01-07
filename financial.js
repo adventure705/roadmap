@@ -1092,7 +1092,7 @@ function renderYearlyTable() {
             bodyHTML += `<button onclick="openInstallmentModal('${item.id}')" class="text-blue-400 hover:text-blue-300 opacity-0 group-hover:opacity-100 transition p-1">✎</button>`;
         }
         // Move Buttons
-        if (!isBusiness) {
+        if (!isBusiness && !isInstallment) {
             bodyHTML += `<button onclick="moveItem('${item.id}', -1)" class="text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition p-1 text-xs">▲</button>`;
             bodyHTML += `<button onclick="moveItem('${item.id}', 1)" class="text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition p-1 text-xs">▼</button>`;
         }
