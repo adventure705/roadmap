@@ -17,7 +17,117 @@ function initFinancialPage(type, mode = 'yearly') {
     loadData();
     renderMemos();
     updateUI();
+    renderPageTitle();
 }
+
+function renderPageTitle() {
+    const titleEl = document.getElementById('pageTitle');
+    if (!titleEl) return;
+
+    // Default titles mapping
+    const defaultTitles = {
+        'fixed': '고정 지출 관리',
+        'variable': '변동 지출 관리',
+        'income': '수입 관리',
+        'cash': '현금 지출 관리',
+        'installment': '할부 관리',
+        'business': '사업자 통합 관리'
+    };
+
+    const savedTitle = (roadmapData.pageTitles && roadmapData.pageTitles[window.currentPageType])
+        ? roadmapData.pageTitles[window.currentPageType]
+        : defaultTitles[window.currentPageType];
+
+    titleEl.innerText = savedTitle || '지출 관리';
+    titleEl.onclick = togglePageTitleEdit;
+}
+
+function togglePageTitleEdit() {
+    const titleEl = document.getElementById('pageTitle');
+    if (!titleEl) return;
+
+    const currentText = titleEl.innerText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentText;
+    input.className = 'text-2xl font-bold bg-transparent text-white border-b border-blue-500 focus:outline-none';
+
+    input.onblur = function () {
+        finishPageTitleEdit(this.value);
+    };
+    input.onkeydown = function (e) {
+        if (e.key === 'Enter') this.blur();
+    };
+
+    titleEl.replaceWith(input);
+    input.focus();
+}
+
+function finishPageTitleEdit(newTitle) {
+    if (!roadmapData.pageTitles) roadmapData.pageTitles = {};
+    roadmapData.pageTitles[window.currentPageType] = newTitle;
+    saveData();
+
+    const h2 = document.createElement('h2');
+    h2.id = 'pageTitle';
+    h2.className = 'text-2xl font-bold mb-1 cursor-pointer hover:text-blue-400 transition';
+    h2.innerText = newTitle;
+    h2.onclick = togglePageTitleEdit;
+
+    // Find the input (it replaced the h2, so we need to find the input that is now in DOM)
+    // We can't rely on ID because input doesn't have ID 'pageTitle'
+    // But this function is called from onblur of that input, so we effectively replace 'this' in DOM if we had reference.
+    // 'this' in onblur is the input element.
+    // However, here we are inside a separate function.
+    // Simplest way is to find the input in the header container or pass element reference.
+    // But since onblur calls this, we need to locate the input.
+    // Actually, simple way: we assume the input is where title should be.
+    // Let's pass 'inputEl' to this function.
+
+    // Re-implementation:
+    // togglePageTitleEdit creates input with onblur calling save function.
+    // save function rebuilds h2.
+    // To rebuild, we need to know WHERE to put it.
+    // The input is currently in the DOM. "this" in onblur refers to input.
+    // So let's attach the logic directly in togglePageTitleEdit's onblur.
+}
+
+// Redefining togglePageTitleEdit to include save logic directly to avoid reference issues
+window.togglePageTitleEdit = function () {
+    const titleEl = document.getElementById('pageTitle');
+    if (!titleEl) return;
+
+    const currentText = titleEl.innerText;
+    const parent = titleEl.parentNode;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentText;
+    input.className = 'text-2xl font-bold bg-gray-800 text-white border border-blue-500 rounded px-2 py-0.5 focus:outline-none w-auto inline-block mb-1';
+
+    input.onblur = function () {
+        const val = this.value;
+        if (!roadmapData.pageTitles) roadmapData.pageTitles = {};
+        roadmapData.pageTitles[window.currentPageType] = val;
+        saveData();
+
+        const h2 = document.createElement('h2');
+        h2.id = 'pageTitle';
+        h2.className = 'text-2xl font-bold mb-1 cursor-pointer hover:text-blue-400 transition select-none';
+        h2.innerText = val;
+        h2.onclick = window.togglePageTitleEdit;
+        h2.title = '클릭하여 제목 수정';
+
+        this.replaceWith(h2);
+    };
+
+    input.onkeydown = function (e) {
+        if (e.key === 'Enter') this.blur();
+    };
+
+    titleEl.replaceWith(input);
+    input.focus();
+};
 
 function updateUI() {
     // Year Display
@@ -1188,13 +1298,17 @@ function openCategoryManager() {
     if (!roadmapData.categoryOperators) roadmapData.categoryOperators = {};
     if (!roadmapData.categoryOperators[currentPageType]) roadmapData.categoryOperators[currentPageType] = {};
 
+    // Initialize colors map if needed
+    if (!roadmapData.categoryColors) roadmapData.categoryColors = {};
+    if (!roadmapData.categoryColors[currentPageType]) roadmapData.categoryColors[currentPageType] = {};
+
     // Default migration for Business (if empty)
     if (currentPageType === 'business' && Object.keys(roadmapData.categoryOperators[currentPageType]).length === 0) {
         roadmapData.categoryOperators[currentPageType] = { '매출': '+', '비용': '-', '환율': '*' };
     }
 
     const operators = roadmapData.categoryOperators[currentPageType];
-    const colors = roadmapData.categoryColors ? roadmapData.categoryColors[currentPageType] : {};
+    const colors = roadmapData.categoryColors[currentPageType];
 
     list.forEach((cat, idx) => {
         const op = operators[cat] || '+'; // Default

@@ -1,5 +1,5 @@
 const formatMoneyFull = (amount) => {
-    return new Intl.NumberFormat('ko-KR').format(amount);
+    return new Intl.NumberFormat('ko-KR').format(Math.round(amount));
 };
 
 function initInvestmentPage() {
@@ -325,17 +325,10 @@ function autoFormatValue(val) {
         }
     }
 
-    // 2. Number Check (If it's a numeric string, format with commas)
-    // We check if it's a valid number after removing commas
+    // 2. Number Check (Round to integer and add commas)
     const numRaw = raw.replace(/,/g, '');
-    if (!isNaN(numRaw) && numRaw !== '' && !raw.includes('.')) {
-        // Integer Check
-        return Number(numRaw).toLocaleString();
-    } else if (!isNaN(numRaw) && numRaw !== '') {
-        // Float Check
-        const parts = numRaw.split('.');
-        parts[0] = Number(parts[0]).toLocaleString();
-        return parts.join('.');
+    if (!isNaN(numRaw) && numRaw !== '') {
+        return Math.round(Number(numRaw)).toLocaleString();
     }
 
     return raw;

@@ -109,7 +109,9 @@
                 <div class="flex justify-between items-start mb-4">
                     <div class="flex flex-col gap-2">
                         <div class="flex items-center gap-4">
-                            <h2 class="text-2xl font-bold mb-1">현금 지출 관리</h2>
+                            <h2 id="pageTitle"
+                                class="text-2xl font-bold mb-1 cursor-pointer hover:text-blue-400 transition"
+                                onclick="togglePageTitleEdit()" title="클릭하여 제목 수정">현금 지출 관리</h2>
 
                             <!-- Month Selector -->
                             <div class="flex gap-4">
@@ -287,7 +289,7 @@
                     class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition">복사하기</button>
             </div>
         </div>
-    </div>    <!-- Firebase SDK -->
+    </div> <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>

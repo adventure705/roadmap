@@ -251,7 +251,9 @@ function syncMemoryToCloud() {
         investment: roadmapData.investment || {},
         management: roadmapData.management || {},
         moneyPlan: roadmapData.moneyPlan || {},
-        updatedAt: roadmapData.updatedAt || 0
+        updatedAt: roadmapData.updatedAt || 0,
+        dashboardSubtitle: roadmapData.dashboardSubtitle || "자산 흐름 요약",
+        pageTitles: roadmapData.pageTitles || {}
     };
 
     db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave)
@@ -274,6 +276,7 @@ function triggerUIUpdate() {
     if (typeof updateSettlementUI === 'function') updateSettlementUI();
     if (typeof renderMoneyPlanUI === 'function') renderMoneyPlanUI();
     if (typeof renderMemos === 'function') renderMemos();
+    if (typeof renderPageTitle === 'function') renderPageTitle();
 }
 
 function mergeCloudData(cloudData) {
@@ -288,6 +291,8 @@ function mergeCloudData(cloudData) {
     if (cloudData.investment) roadmapData.investment = cloudData.investment;
     if (cloudData.management) roadmapData.management = cloudData.management;
     if (cloudData.moneyPlan) roadmapData.moneyPlan = cloudData.moneyPlan;
+    if (cloudData.dashboardSubtitle) roadmapData.dashboardSubtitle = cloudData.dashboardSubtitle;
+    if (cloudData.pageTitles) roadmapData.pageTitles = cloudData.pageTitles;
     roadmapData.updatedAt = cloudData.updatedAt || 0;
 
     // Ensure no properties are undefined
@@ -295,6 +300,7 @@ function mergeCloudData(cloudData) {
     if (!roadmapData.categoryColors) roadmapData.categoryColors = {};
     if (!roadmapData.businessNames) roadmapData.businessNames = [];
     if (!roadmapData.management) roadmapData.management = { block1: { title: "정보 관리 리스트", rows: [], cols: [], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [] } };
+    if (!roadmapData.pageTitles) roadmapData.pageTitles = {};
 
     localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
     console.log("✅ Memory updated from Firestore");
@@ -304,6 +310,10 @@ function mergeCloudData(cloudData) {
 function processParsedData(parsed) {
     if (parsed.updatedAt) roadmapData.updatedAt = parsed.updatedAt;
     else roadmapData.updatedAt = 0;
+
+    if (parsed.dashboardSubtitle) roadmapData.dashboardSubtitle = parsed.dashboardSubtitle;
+    if (parsed.pageTitles) roadmapData.pageTitles = parsed.pageTitles;
+    else roadmapData.pageTitles = {};
 
     // Check if it's the new format (has 'years' property) or old format
     let yearsData;
@@ -512,7 +522,82 @@ function changeMonth(delta) {
     if (typeof updateUI === 'function') {
         updateUI();
     } else if (typeof updateSettlementUI === 'function') {
-        // Fallback for settlement page if updateUI isn't globally alias yet
         updateSettlementUI();
     }
+
+    // Always try to render title if the key is known or passed
+    // We need to know the current 'pageKey'.
+    // In financial.js derived pages, window.currentPageType is set.
+    // We should encourage specific pages to set window.currentPageType or passed key.
+    if (window.currentPageType) renderPageTitle(window.currentPageType);
+}
+
+// --- Page Title Editing Logic (Centralized) ---
+
+function renderPageTitle(pageKey) {
+    if (!pageKey) return;
+    const titleEl = document.getElementById('pageTitle');
+    if (!titleEl) return;
+
+    // Default titles mapping for all pages
+    const defaultTitles = {
+        'fixed': '고정 지출 관리',
+        'variable': '변동 지출 관리',
+        'income': '수입 관리',
+        'cash': '현금 지출 관리',
+        'installment': '할부 관리',
+        'business': '사업자 통합 관리',
+        'dashboard': '대시보드',
+        'roadmap': '단기 로드맵',
+        'settlement': '지출 예정산',
+        'investment': '투자 수입 관리',
+        'management': '정보 관리'
+    };
+
+    const savedTitle = (roadmapData.pageTitles && roadmapData.pageTitles[pageKey])
+        ? roadmapData.pageTitles[pageKey]
+        : defaultTitles[pageKey];
+
+    titleEl.innerText = savedTitle || '제목 없음';
+
+    // Ensure standard styling
+    titleEl.classList.add('cursor-pointer', 'hover:text-blue-400', 'transition');
+    titleEl.title = '클릭하여 제목 수정';
+
+    titleEl.onclick = () => togglePageTitleEdit(pageKey);
+}
+
+function togglePageTitleEdit(pageKey) {
+    const titleEl = document.getElementById('pageTitle');
+    if (!titleEl) return;
+
+    const currentText = titleEl.innerText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentText;
+    // Styling to match generic H2 but editable
+    input.className = 'text-2xl font-bold bg-gray-800 text-white border border-blue-500 rounded px-2 py-0.5 focus:outline-none w-auto inline-block mb-1';
+
+    input.onblur = function () {
+        const val = this.value;
+        if (!roadmapData.pageTitles) roadmapData.pageTitles = {};
+        roadmapData.pageTitles[pageKey] = val;
+        saveData();
+
+        const h2 = document.createElement('h2');
+        h2.id = 'pageTitle';
+        h2.className = 'text-2xl font-bold mb-1 cursor-pointer hover:text-blue-400 transition select-none';
+        h2.innerText = val;
+        h2.onclick = () => togglePageTitleEdit(pageKey);
+        h2.title = '클릭하여 제목 수정';
+
+        this.replaceWith(h2);
+    };
+
+    input.onkeydown = function (e) {
+        if (e.key === 'Enter') this.blur();
+    };
+
+    titleEl.replaceWith(input);
+    input.focus();
 }

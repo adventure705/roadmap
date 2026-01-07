@@ -49,8 +49,10 @@
         <section id="dashboard" class="max-w-7xl mx-auto block">
             <header class="mb-8 flex justify-between items-center">
                 <div>
-                    <h2 class="text-3xl font-bold mb-2">대시보드</h2>
-                    <p class="text-gray-400">자산 흐름 요약</p>
+                    <h2 id="pageTitle" class="text-3xl font-bold mb-2">대시보드</h2>
+                    <input type="text" id="dashboardSubtitle"
+                        class="text-gray-400 bg-transparent border-none focus:outline-none focus:text-white w-full"
+                        value="자산 흐름 요약" onchange="saveDashboardSubtitle(this.value)">
                 </div>
                 <div class="flex gap-4">
                     <!-- Year Selector -->
@@ -121,6 +123,20 @@
     <script src="firebase_init.js"></script>
     <script src="data.js"></script>
     <script src="dashboard.js"></script>
+    <script src="dashboard.js"></script>
+    <script>
+        window.addEventListener('load', () => {
+            window.currentPageType = 'dashboard';
+            // Wait for data load if needed, or call directly if data.js loads fast
+            // Since data.js loads first, usually fine.
+            // But we need to ensure loadData() has finished.
+            // dashboard.js probably calls updateDashboard() which might be where to hook.
+            // But let's try direct call here, dashboard.js onload might handle it too.
+            // Better: updateUI in dashboard.js should call it if we add it there, OR just call here with a timeout or after data load.
+            // Simplest: call it here, if data isn't ready, defaults will show, then data load updates ui.
+            if (typeof renderPageTitle === 'function') renderPageTitle('dashboard');
+        });
+    </script>
 </body>
 
 </html>

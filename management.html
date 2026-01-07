@@ -173,7 +173,7 @@
     <main class="flex-1 min-h-screen bg-dark p-4 lg:p-8 relative">
         <div class="max-w-7xl mx-auto space-y-8 pb-20">
             <div>
-                <h2 class="text-3xl font-bold mb-2">정보 관리</h2>
+                <h2 id="pageTitle" class="text-3xl font-bold mb-2">정보 관리</h2>
                 <input type="text" id="pageSubtitle"
                     class="bg-transparent text-gray-400 text-sm focus:outline-none focus:text-white w-full max-w-2xl"
                     onchange="updateSubtitle(this.value)">
@@ -241,7 +241,7 @@
                     class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl font-bold transition shadow-lg shadow-blue-500/20">완료</button>
             </div>
         </div>
-    </div>    <!-- Firebase SDK -->
+    </div> <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -250,6 +250,13 @@
 
     <script src="data.js"></script>
     <script src="management.js"></script>
+    <script src="management.js"></script>
+    <script>
+        window.addEventListener('load', () => {
+            window.currentPageType = 'management';
+            if (typeof renderPageTitle === 'function') renderPageTitle('management');
+        });
+    </script>
 </body>
 
 </html>

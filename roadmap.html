@@ -107,7 +107,7 @@
         <section id="roadmap-sheet" class="w-full h-full pb-20">
             <header class="mb-6 flex justify-between items-center">
                 <div class="flex items-center gap-4">
-                    <h2 class="text-2xl font-bold mb-1">단기 로드맵</h2>
+                    <h2 id="pageTitle" class="text-2xl font-bold mb-1">단기 로드맵</h2>
                     <div class="flex items-center bg-card rounded-lg p-1 border border-white/10 ml-4">
                         <button onclick="changeYear(-1)"
                             class="px-2 py-1 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition text-xs">◀</button>
@@ -140,6 +140,13 @@
     <script src="firebase_init.js"></script>
     <script src="data.js"></script>
     <script src="roadmap.js"></script>
+    <script src="roadmap.js"></script>
+    <script>
+        window.addEventListener('load', () => {
+            window.currentPageType = 'roadmap';
+            if (typeof renderPageTitle === 'function') renderPageTitle('roadmap');
+        });
+    </script>
 </body>
 
 </html>

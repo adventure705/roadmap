@@ -182,7 +182,7 @@ function renderSidebar(activePage) {
             <span class="text-xl mr-2">🚀</span>
             <span class="font-bold text-base tracking-tight text-white">슈퍼문</span>
         </div>
-        <button id="mobileMenuToggle" class="p-2 text-gray-400 hover:text-white transition focus:outline-none">
+        <button id="mobileMenuToggle" class="p-2 text-gray-400 hover:text-white transition focus:outline-none active:scale-95">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
         </button>
     </div>
@@ -194,25 +194,29 @@ function renderSidebar(activePage) {
                 <span class="text-2xl mr-2">🚀</span>
                 <span class="font-bold text-lg tracking-tight text-white">슈퍼문</span>
             </div>
-            <button onclick="openSidebarManager()" class="text-gray-500 hover:text-white transition p-1" title="메뉴 설정">⚙️</button>
+            <div class="flex items-center gap-1">
+                 <button onclick="openSidebarManager()" class="text-gray-500 hover:text-white transition p-1" title="메뉴 설정">⚙️</button>
+                 <!-- Mobile Close Button (Inside Header) -->
+                 <button id="closeSidebar" class="lg:hidden text-gray-500 hover:text-white transition p-1 ml-1">✕</button>
+            </div>
         </div>
         <div class="p-4 flex-1 space-y-1 overflow-y-auto custom-scrollbar">
             ${menuHTML}
         </div>
-        <div class="lg:hidden absolute top-4 right-[-40px]">
-             <button id="closeSidebar" class="bg-gray-800 p-2 rounded-r-lg text-gray-400">✕</button>
-        </div>
     </aside>
 
     <!-- Overlay -->
-    <div id="sidebarOverlay" class="fixed inset-0 bg-black/60 z-[65] hidden lg:hidden backdrop-blur-sm transition-opacity duration-300"></div>
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/60 z-[65] hidden lg:hidden backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
 
     <style>
         @media (max-width: 1023px) {
+            body.sidebar-open { overflow: hidden !important; }
+            .sidebar-open #mainSidebar { transform: translateX(0); }
+            .sidebar-open #sidebarOverlay { display: block; opacity: 1; }
+            
             body { padding-top: 56px; height: auto !important; overflow: auto !important; }
             main { height: auto !important; overflow: visible !important; width: 100% !important; padding: 16px !important; }
-            .sidebar-open aside { transform: translateX(0); }
-            .sidebar-open #sidebarOverlay { display: block; }
+            
             #memoModal > div, #sidebarManagerModal > div { width: 90% !important; max-width: 450px; margin: 0 16px; }
             .glass-panel { padding: 16px !important; }
             
@@ -234,30 +238,33 @@ function renderSidebar(activePage) {
         /* Global Modal Scale */
         .modal-active { overflow: hidden !important; }
     </style>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const toggle = document.getElementById('mobileMenuToggle');
-            const close = document.getElementById('closeSidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            const body = document.body;
-
-            const toggleSidebar = () => body.classList.toggle('sidebar-open');
-            if(toggle) toggle.onclick = toggleSidebar;
-            if(close) close.onclick = toggleSidebar;
-            if(overlay) overlay.onclick = toggleSidebar;
-
-            // Close sidebar on link click (mobile)
-            document.querySelectorAll('.sidebar-link').forEach(link => {
-                link.addEventListener('click', () => {
-                    if(window.innerWidth < 1024) body.classList.remove('sidebar-open');
-                });
-            });
-        });
-    </script>
     `;
+
     // 안전한 DOM 삽입 방식 사용 (document.write는 페이지를 덮어씀)
     document.body.insertAdjacentHTML('afterbegin', sidebarHTML);
+
+    // --- Mobile Sidebar Logic (Executed Immediately) ---
+    const toggle = document.getElementById('mobileMenuToggle');
+    const close = document.getElementById('closeSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const body = document.body;
+
+    const toggleSidebar = () => {
+        body.classList.toggle('sidebar-open');
+    };
+
+    // Explicitly bind click events
+    if (toggle) toggle.addEventListener('click', toggleSidebar);
+    if (close) close.addEventListener('click', toggleSidebar);
+    if (overlay) overlay.addEventListener('click', toggleSidebar);
+
+    // Close on link click (mobile)
+    const links = document.querySelectorAll('.sidebar-link');
+    links.forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth < 1024) body.classList.remove('sidebar-open');
+        });
+    });
     // Move the shared modals outside aside to avoid translation issues
     const globalModals = `
     <!-- Sidebar Manager Modal -->
@@ -469,3 +476,60 @@ window.deleteMemo = function (type, idx) {
         renderMemos();
     }
 };
+
+// Global Esc Key Handler for Modals
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        // Find all potential modals (fullscreen overlays)
+        const overlays = Array.from(document.querySelectorAll('.fixed.inset-0, #sidebarOverlay'));
+
+        // Filter for visible ones
+        const visibleOverlays = overlays.filter(el => {
+            const style = window.getComputedStyle(el);
+            return style.display !== 'none' &&
+                style.visibility !== 'hidden' &&
+                style.opacity !== '0';
+        });
+
+        if (visibleOverlays.length === 0) return;
+
+        // Sort by z-index (descending) to find the top-most modal
+        visibleOverlays.sort((a, b) => {
+            const zA = parseInt(window.getComputedStyle(a).zIndex) || 0;
+            const zB = parseInt(window.getComputedStyle(b).zIndex) || 0;
+            return zB - zA;
+        });
+
+        const topModal = visibleOverlays[0];
+
+        // 1. Sidebar Overlay Special Case
+        if (topModal.id === 'sidebarOverlay') {
+            topModal.click(); // Triggers toggleSidebar
+            return;
+        }
+
+        // 2. Try to find an explicit "Close" or "Cancel" button
+        // Look for buttons with onclick containing 'close' or 'Cancel', or text content like '취소', '닫기', '✕'
+        let closeBtn = topModal.querySelector('button[onclick*="close"], button[onclick*="Close"]');
+
+        if (!closeBtn) {
+            const btns = Array.from(topModal.querySelectorAll('button'));
+            closeBtn = btns.find(b => {
+                const txt = b.innerText.trim();
+                return txt === '취소' || txt === '닫기' || txt === '✕' || txt === '✖';
+            });
+        }
+
+        // 3. Execute Close
+        if (closeBtn) {
+            closeBtn.click();
+        } else {
+            // Fallback: Force hide
+            topModal.style.display = 'none';
+            // If it uses hidden class logic, add it
+            if (!topModal.classList.contains('hidden')) {
+                topModal.classList.add('hidden');
+            }
+        }
+    }
+});

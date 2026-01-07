@@ -71,6 +71,17 @@ function updateDashboard() {
 
     // 3. Render Comparison Chart
     renderComparisonChart();
+
+    // 4. Load Subtitle
+    const subtitleInput = document.getElementById('dashboardSubtitle');
+    if (subtitleInput) {
+        subtitleInput.value = roadmapData.dashboardSubtitle || '자산 흐름 요약';
+    }
+}
+
+function saveDashboardSubtitle(val) {
+    roadmapData.dashboardSubtitle = val;
+    saveData();
 }
 
 

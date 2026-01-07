@@ -103,7 +103,9 @@
                 <div class="flex flex-col md:flex-row justify-between items-start mb-4 gap-4">
                     <div class="flex flex-col gap-2">
                         <div class="flex items-center gap-4">
-                            <h2 class="text-2xl font-bold mb-1">할부 관리</h2>
+                            <h2 id="pageTitle"
+                                class="text-2xl font-bold mb-1 cursor-pointer hover:text-blue-400 transition"
+                                onclick="togglePageTitleEdit()" title="클릭하여 제목 수정">할부 관리</h2>
                             <div class="flex items-center bg-card rounded-lg p-1 border border-white/10 ml-4">
                                 <button onclick="changeYear(-1)"
                                     class="px-2 py-1 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition text-xs">◀</button>

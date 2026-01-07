@@ -111,7 +111,7 @@
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
                     <div class="flex flex-col gap-2">
                         <div class="flex items-center gap-4">
-                            <h2 class="text-2xl font-bold mb-1">지출 예정산</h2>
+                            <h2 id="pageTitle" class="text-2xl font-bold mb-1">지출 예정산</h2>
 
                             <!-- Year/Month Selector -->
                             <div class="flex gap-4">
@@ -410,7 +410,7 @@
                     class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition">저장</button>
             </div>
         </div>
-    </div>    <!-- Firebase SDK -->
+    </div> <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -426,6 +426,9 @@
             loadData();
             // Initialize Settlement Page
             initSettlementPage();
+
+            window.currentPageType = 'settlement';
+            if (typeof renderPageTitle === 'function') renderPageTitle('settlement');
         });
     </script>
 </body>
