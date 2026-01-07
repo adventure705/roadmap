@@ -57,7 +57,7 @@ let roadmapData = {
     },
     commonMemos: {
         fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [],
-        business: [], investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: []
+        business: [], investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
     },
     categoryOperators: {},
     categoryColors: {},
@@ -444,16 +444,30 @@ function processParsedData(parsed) {
             if (!yearsData[y].details.settlement) yearsData[y].details.settlement = [];
             if (!yearsData[y].details.business) yearsData[y].details.business = []; // Ensure business exists
 
-            // Ensure monthlyMemos exist
-            if (!yearsData[y].monthlyMemos) {
+            // Ensure monthlyMemos exist and are in the correct format (12-slot array)
+            const oldMemos = yearsData[y].monthlyMemos;
+            if (!oldMemos) {
                 yearsData[y].monthlyMemos = Array.from({ length: 12 }, () => ({
-                    fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: []
+                    fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: [],
+                    investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
                 }));
-            } else {
-                // Check inner keys of existing memos
-                yearsData[y].monthlyMemos.forEach(m => {
-                    if (!m.settlement) m.settlement = [];
-                    if (!m.business) m.business = [];
+            } else if (!Array.isArray(oldMemos) && typeof oldMemos === 'object') {
+                // Migrate from Object Keyed by month names ("1월"...) to Array
+                const newMemosArr = Array.from({ length: 12 }, () => ({
+                    fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: [],
+                    investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
+                }));
+                roadmapData.months.forEach((monthName, idx) => {
+                    if (oldMemos[monthName]) {
+                        newMemosArr[idx] = oldMemos[monthName];
+                    }
+                });
+                yearsData[y].monthlyMemos = newMemosArr;
+            } else if (Array.isArray(oldMemos)) {
+                // Ensure all keys exist in each slot
+                oldMemos.forEach(m => {
+                    const keys = ['fixed', 'variable', 'income', 'cash', 'installment', 'settlement', 'business', 'investment', 'roadmap', 'management', 'secret_board', 'moneyPlan', 'dashboard'];
+                    keys.forEach(k => { if (!m[k]) m[k] = []; });
                 });
             }
         }
@@ -483,7 +497,7 @@ roadmapData.createYearData = () => ({
     },
     monthlyMemos: Array.from({ length: 12 }, () => ({
         fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: [],
-        investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: []
+        investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
     })),
     moneyPlan: {
         plan: { reserve: {}, monthly: {} },

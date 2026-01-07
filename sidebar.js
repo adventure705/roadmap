@@ -405,8 +405,8 @@ window.renderMemos = function (containerId = 'memoContainer') {
     html += '</div></div>';
 
     // 2. Monthly Memo
-    // Allow monthly memos for more tabs
-    const validMonthlyTabs = ['fixed', 'variable', 'income', 'cash', 'installment', 'settlement', 'business', 'investment', 'roadmap', 'management', 'secret_board', 'moneyPlan'];
+    // Allow monthly memos for specific tabs only
+    const validMonthlyTabs = ['fixed', 'variable', 'income', 'cash', 'installment', 'settlement', 'dashboard'];
     if (validMonthlyTabs.includes(currentPageType)) {
         const monthlyMemosMap = yearData.monthlyMemos || [];
         const memosForMonth = monthlyMemosMap[currentMonth] || {};
