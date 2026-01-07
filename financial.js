@@ -1250,6 +1250,10 @@ function renderInstallmentDetails(itemId, monthIndex) {
 
     if (!detailView || !detailContent) return;
 
+    // Store current state for re-rendering
+    window.lastDetailItemId = itemId;
+    window.lastDetailMonthIndex = monthIndex;
+
     const yearData = roadmapData.years[currentYear];
     const list = yearData.details['installment'];
     const item = list.find(it => it.id === itemId);
@@ -1261,12 +1265,13 @@ function renderInstallmentDetails(itemId, monthIndex) {
     }
 
     const info = item.installmentInfo;
+    // Migration: If schedule is missing, generate it now
+    if (!info.schedule) {
+        info.schedule = calcInstallmentSchedule(info.total, info.months, info.rate, info.type).schedule;
+    }
+
     const clickMonthTitle = (monthIndex === -1) ? '전체 요약' : `${currentYear}년 ${monthIndex + 1}월 상세`;
     detailTitle.innerText = `${item.name} - ${clickMonthTitle} `;
-
-    // Helper: Find absolute month index from start
-    // Start: info.startYear, info.startMonth
-    // Current Click: currentYear, monthIndex
 
     let html = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-800 rounded-lg">
         <div><span class="block text-gray-500 text-xs">카드사</span><span class="font-bold text-blue-300">${item.card}</span></div>
@@ -1277,54 +1282,63 @@ function renderInstallmentDetails(itemId, monthIndex) {
 
     // Specific Month Detail
     if (monthIndex !== -1) {
-        // Calculate which installment sequence this month corresponds to
         const diffYears = currentYear - info.startYear;
-        const absMonthIndex = (diffYears * 12) + monthIndex - (info.startMonth - 1); // 0-based index from start
+        const absMonthIndex = (diffYears * 12) + monthIndex - (info.startMonth - 1);
 
         if (absMonthIndex >= 0 && absMonthIndex < info.months) {
-            // Recalculate generic schedule (Ideally we store this, but recalculation is cheap)
-            const sched = calcInstallmentSchedule(info.total, info.months, info.rate, info.type).schedule;
-            const step = sched[absMonthIndex];
+            const step = info.schedule[absMonthIndex];
 
-            html += `<h4 class="font-bold text-lg mb-2 text-white border-b border-white/10 pb-2">${absMonthIndex + 1}회차 납부 내역</h4>
+            html += `<h4 class="font-bold text-lg mb-2 text-white border-b border-white/10 pb-2">${absMonthIndex + 1}회차 납부 내역 (수동 수정 가능)</h4>
             <div class="flex justify-between items-center bg-gray-700/50 p-4 rounded-lg">
-                <div class="text-center">
-                    <p class="text-xs text-gray-400">납부 원금</p>
-                    <p class="text-lg font-bold text-white">${formatMoneyFull(step.principal)}원</p>
+                <div class="text-center flex-1">
+                    <p class="text-xs text-gray-400 mb-1">납부 원금</p>
+                    <input type="text" class="bg-gray-900 border border-gray-600 text-white font-bold text-center rounded p-1 w-24" 
+                        value="${formatMoneyFull(step.principal)}" 
+                        onfocus="this.value = this.value.replace(/,/g, '')"
+                        onblur="updateInstallmentStep('${itemId}', ${absMonthIndex}, 'principal', this.value)">
                 </div>
-                <div class="text-2xl text-gray-600">+</div>
-                <div class="text-center">
-                    <p class="text-xs text-gray-400">할부 이자</p>
-                    <p class="text-lg font-bold text-yellow-400">${formatMoneyFull(step.interest)}원</p>
+                <div class="text-2xl text-gray-600 px-2">+</div>
+                <div class="text-center flex-1">
+                    <p class="text-xs text-gray-400 mb-1">할부 이자</p>
+                    <input type="text" class="bg-gray-900 border border-gray-600 text-yellow-500 font-bold text-center rounded p-1 w-24" 
+                        value="${formatMoneyFull(step.interest)}" 
+                        onfocus="this.value = this.value.replace(/,/g, '')"
+                        onblur="updateInstallmentStep('${itemId}', ${absMonthIndex}, 'interest', this.value)">
                 </div>
-                <div class="text-2xl text-gray-600">=</div>
-                <div class="text-center">
+                <div class="text-2xl text-gray-600 px-2">=</div>
+                <div class="text-center flex-1">
                     <p class="text-xs text-gray-400 text-blue-300">총 납부액</p>
                     <p class="text-xl font-bold text-blue-300">${formatMoneyFull(step.payment)}원</p>
                 </div>
-            </div>
-            <div class="mt-2 text-right text-xs text-gray-500">
-                남은 원금: ${formatMoneyFull(step.balanceAfter)}원
             </div>`;
         } else {
             html += `<p class="text-gray-500 py-4">이 달은 할부 납부 기간이 아닙니다.</p>`;
         }
     } else {
         // Full Schedule Summary (Simple list)
-        html += `<h4 class="font-bold text-lg mb-2 text-white border-b border-white/10 pb-2">전체 상환 스케줄</h4>
-            <div class="max-h-60 overflow-y-auto">
+        html += `<h4 class="font-bold text-lg mb-2 text-white border-b border-white/10 pb-2">전체 상환 스케줄 (수동 수정 가능)</h4>
+            <div class="max-h-80 overflow-y-auto">
                 <table class="w-full text-xs text-left">
-                    <thead class="bg-gray-700 text-gray-300 text-center sticky top-0">
+                    <thead class="bg-gray-700 text-gray-300 text-center sticky top-0 font-bold">
                         <tr><th class="p-2">회차</th><th class="p-2">원금</th><th class="p-2">이자</th><th class="p-2">합계</th><th class="p-2">잔액</th></tr>
                     </thead>
                     <tbody class="text-center">`;
 
-        const sched = calcInstallmentSchedule(info.total, info.months, info.rate, info.type).schedule;
-        sched.forEach(s => {
+        info.schedule.forEach((s, idx) => {
             html += `<tr class="border-b border-white/5 hover:bg-white/5">
                 <td class="p-2">${s.monthIndex}</td>
-                <td class="p-2 text-gray-300">${formatMoneyFull(s.principal)}</td>
-                <td class="p-2 text-yellow-500">${formatMoneyFull(s.interest)}</td>
+                <td class="p-2">
+                    <input type="text" class="bg-transparent border border-white/10 text-gray-300 text-right rounded px-1 w-20" 
+                        value="${formatMoneyFull(s.principal)}" 
+                        onfocus="this.value = this.value.replace(/,/g, '')"
+                        onblur="updateInstallmentStep('${itemId}', ${idx}, 'principal', this.value)">
+                </td>
+                <td class="p-2">
+                    <input type="text" class="bg-transparent border border-white/10 text-yellow-500 text-right rounded px-1 w-16" 
+                        value="${formatMoneyFull(s.interest)}" 
+                        onfocus="this.value = this.value.replace(/,/g, '')"
+                        onblur="updateInstallmentStep('${itemId}', ${idx}, 'interest', this.value)">
+                </td>
                 <td class="p-2 font-bold text-white">${formatMoneyFull(s.payment)}</td>
                 <td class="p-2 text-gray-500">${formatMoneyFull(s.balanceAfter)}</td>
              </tr>`;
@@ -1334,6 +1348,53 @@ function renderInstallmentDetails(itemId, monthIndex) {
 
     detailContent.innerHTML = html;
     detailView.classList.remove('hidden');
+}
+
+function updateInstallmentStep(itemId, absMonthIndex, field, value) {
+    const numVal = parseInt(String(value).replace(/,/g, '')) || 0;
+
+    // Update across ALL years for this item ID
+    for (const y in roadmapData.years) {
+        const list = roadmapData.years[y].details['installment'] || [];
+        const item = list.find(it => it.id === itemId);
+        if (item && item.installmentInfo) {
+            const info = item.installmentInfo;
+            if (!info.schedule) {
+                info.schedule = calcInstallmentSchedule(info.total, info.months, info.rate, info.type).schedule;
+            }
+
+            const step = info.schedule[absMonthIndex];
+            if (step) {
+                step[field] = numVal;
+                step.payment = step.principal + step.interest;
+                // Note: We don't automatically recalculate the entire balanceAfter chain 
+                // because the user is manually overriding specific steps.
+            }
+
+            // Sync the values array for THIS year
+            const startYear = parseInt(info.startYear);
+            const startMonth = parseInt(info.startMonth);
+            const newValues = new Array(12).fill(0);
+
+            info.schedule.forEach((s, idx) => {
+                const monthOffset = (startMonth - 1) + idx;
+                const targetYear = startYear + Math.floor(monthOffset / 12);
+                const targetMonthIdx = monthOffset % 12;
+
+                if (String(targetYear) === String(y)) {
+                    newValues[targetMonthIdx] += s.payment;
+                }
+            });
+            item.values = newValues;
+        }
+    }
+
+    saveData();
+    updateUI();
+    // Re-render detail view to show calculated payment total
+    if (window.lastDetailItemId === itemId) {
+        renderInstallmentDetails(itemId, window.lastDetailMonthIndex);
+    }
 }
 
 function openCopyMonthModal() {
@@ -1858,7 +1919,8 @@ function confirmAddInstallment() {
         type,
         rate,
         customMonths,
-        totalInterest: scheduleRes.totalInterest
+        totalInterest: scheduleRes.totalInterest,
+        schedule: scheduleRes.schedule // Store the computed schedule
     };
 
     // 1. Group schedule by year
