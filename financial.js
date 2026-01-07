@@ -437,7 +437,7 @@ function openAddItemModal(itemId = null) {
         // Card Input Visibility
         const cardSelect = document.getElementById('addItemCard');
         if (cardSelect && cardSelect.parentElement) {
-            cardSelect.parentElement.style.display = (currentPageType === 'income') ? 'none' : 'block';
+            cardSelect.parentElement.style.display = (currentPageType === 'income' || currentPageType === 'fixed' || currentPageType === 'variable') ? 'none' : 'block';
         }
 
         // Bank Label
@@ -698,7 +698,7 @@ function renderMonthlyTable() {
             분류 ${getSortIndicator('category')}
         </th>`;
 
-    if (!isIncome && currentPageType !== 'fixed') {
+    if (!isIncome && currentPageType !== 'fixed' && currentPageType !== 'variable') {
         headerHTML += `
         <th class="px-6 py-4 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('card')">
             카드 ${getSortIndicator('card')}
@@ -754,7 +754,7 @@ function renderMonthlyTable() {
 
     const monthlyTotal = activeList.reduce((sum, item) => sum + item.values[curM], 0);
 
-    const labelColSpan = isCash ? 5 : ((isIncome || currentPageType === 'fixed') ? 3 : 4);
+    const labelColSpan = isCash ? 5 : ((isIncome || currentPageType === 'fixed' || currentPageType === 'variable') ? 3 : 4);
 
     // Total Row (Top)
     bodyHTML += `<tr class="bg-gray-800/80 font-bold border-b-2 border-white/10">`;
@@ -808,8 +808,8 @@ function renderMonthlyTable() {
         </select>
             </td>`;
 
-            // Card (Select) - Skip for Income and Fixed
-            if (!isIncome && currentPageType !== 'fixed') {
+            // Card (Select) - Skip for Income, Fixed, and Variable
+            if (!isIncome && currentPageType !== 'fixed' && currentPageType !== 'variable') {
                 bodyHTML += `<td class="px-6 py-1">
             <select class="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1.5"
                 onchange="updateItemCard('${item.id}', this.value)">
