@@ -228,7 +228,11 @@ function renderBlock(blockId, tableId) {
     const data = sb[blockId];
     if (!data) return;
 
+    // Apply Formulas (Calculate values before rendering)
+    applyFormulas(data);
+
     let html = '';
+
 
     // Header
     html += '<thead><tr class="bg-gray-800/50 text-gray-400">';
@@ -536,6 +540,7 @@ function renderStructureLists() {
     const colList = document.getElementById('colManagerList');
     colList.innerHTML = '';
     data.cols.forEach((col, idx) => {
+        const hasFormula = !!col.formula;
         colList.innerHTML += `
         <div class="flex items-center bg-gray-700 p-2 rounded gap-2 text-xs"
              draggable="true" 
@@ -548,6 +553,9 @@ function renderStructureLists() {
                 <input type="checkbox" ${col.sum ? 'checked' : ''} onchange="updateStructCol(${idx}, 'sum', this.checked)">
                 <span class="text-[10px] text-blue-300">합계</span>
             </label>
+            <button onclick="editStructColFormula(${idx})" 
+                class="w-6 h-6 rounded flex items-center justify-center transition ${hasFormula ? 'bg-purple-600 text-white' : 'bg-gray-600 text-gray-400 hover:text-white'}" 
+                title="${hasFormula ? '수식: ' + col.formula : '수식 설정'}">ƒ</button>
              <button onclick="deleteStructCol(${idx})" class="text-red-400 hover:text-red-300">×</button>
         </div>`;
     });
@@ -556,6 +564,11 @@ function renderStructureLists() {
     const rowList = document.getElementById('rowManagerList');
     rowList.innerHTML = '';
     data.rows.forEach((row, idx) => {
+        // Find "Name" of row (first cell value usually)
+        const firstColId = data.cols[0] ? data.cols[0].id : null;
+        const rowName = firstColId ? (row.cells[firstColId] || `Row ${idx + 1}`) : `Row ${idx + 1}`;
+        const hasFormula = !!row.formula;
+
         rowList.innerHTML += `
         <div class="flex items-center bg-gray-700 p-2 rounded gap-2 text-xs"
             draggable="true" 
@@ -563,10 +576,37 @@ function renderStructureLists() {
             ondragover="handleDragOver(event)"
             ondrop="handleDrop(event, 'row', ${idx})">
             <span class="text-gray-400 font-bold w-6 text-center">${idx + 1}</span>
-            <div class="flex-1 text-gray-500 truncate">${idx + 1}행</div>
+            <div class="flex-1 text-gray-300 truncate font-medium">${rowName}</div>
+            <button onclick="editStructRowFormula(${idx})" 
+                class="w-6 h-6 rounded flex items-center justify-center transition ${hasFormula ? 'bg-purple-600 text-white' : 'bg-gray-600 text-gray-400 hover:text-white'}" 
+                title="${hasFormula ? '수식: ' + row.formula : '수식 설정'}">ƒ</button>
              <button onclick="deleteRow('${activeStructBlock}', ${idx}); renderStructureLists();" class="text-red-400 hover:text-red-300">×</button>
         </div>`;
     });
+}
+
+function editStructColFormula(idx) {
+    const sb = roadmapData.years[currentYear].secretBoard;
+    const col = sb[activeStructBlock].cols[idx];
+    const newFormula = prompt('열 계산 수식을 입력하세요.\n(예: [자산] - [부채])', col.formula || '');
+    if (newFormula !== null) {
+        col.formula = newFormula.trim();
+        saveData();
+        renderStructureLists();
+        renderAllBlocks();
+    }
+}
+
+function editStructRowFormula(idx) {
+    const sb = roadmapData.years[currentYear].secretBoard;
+    const row = sb[activeStructBlock].rows[idx];
+    const newFormula = prompt('행 계산 수식을 입력하세요.\n(예: [매출] + [기타])', row.formula || '');
+    if (newFormula !== null) {
+        row.formula = newFormula.trim();
+        saveData();
+        renderStructureLists();
+        renderAllBlocks();
+    }
 }
 
 let dragSourceIdx = null;
@@ -599,24 +639,14 @@ function handleDrop(e, type, targetIdx) {
 
     saveData();
     renderStructureLists();
+    renderAllBlocks();
 }
 
 function updateStructCol(idx, key, val) {
     const sb = roadmapData.years[currentYear].secretBoard;
     sb[activeStructBlock].cols[idx][key] = val;
     saveData();
-}
-
-function moveStructCol(idx, dir) {
-    const sb = roadmapData.years[currentYear].secretBoard;
-    const cols = sb[activeStructBlock].cols;
-    if (dir === -1 && idx > 0) {
-        [cols[idx], cols[idx - 1]] = [cols[idx - 1], cols[idx]];
-    } else if (dir === 1 && idx < cols.length - 1) {
-        [cols[idx], cols[idx + 1]] = [cols[idx + 1], cols[idx]];
-    }
-    saveData();
-    renderStructureLists();
+    renderAllBlocks(); // Live update
 }
 
 function deleteStructCol(idx) {
@@ -625,9 +655,10 @@ function deleteStructCol(idx) {
     sb[activeStructBlock].cols.splice(idx, 1);
     saveData();
     renderStructureLists();
+    renderAllBlocks();
 }
 
-function moveStructRow(idx, dir) {
+function moveStructRow(idx, dir) { // Legacy safe keep
     const sb = roadmapData.years[currentYear].secretBoard;
     const rows = sb[activeStructBlock].rows;
     if (dir === -1 && idx > 0) {
@@ -637,6 +668,7 @@ function moveStructRow(idx, dir) {
     }
     saveData();
     renderStructureLists();
+    renderAllBlocks();
 }
 
 // Resizing (Reused pattern)
@@ -760,6 +792,95 @@ function updateUI() {
     renderMemos();
     renderAllBlocks();
 }
+function applyFormulas(data) {
+    if (!data.rows || !data.cols) return;
+
+    // 1. Build Lookups for fast context building
+    const rowMap = {};
+    const firstColId = data.cols[0] ? data.cols[0].id : null;
+
+    // Normalize Helper
+    const norm = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
+
+    if (firstColId) {
+        data.rows.forEach(row => {
+            // First cell value is the row 'Name' for referencing
+            const name = norm(row.cells[firstColId]);
+            if (name) rowMap[name] = row;
+        });
+    }
+
+    const colMap = {};
+    data.cols.forEach(col => {
+        const name = norm(col.name);
+        if (name) colMap[name] = col;
+    });
+
+    // Evaluation Helper
+    const evalFormula = (formula, contextVars) => {
+        try {
+            // Replace [Name] with value
+            const parsed = formula.replace(/\[([^\]]+)\]/g, (match, p1) => {
+                const key = norm(p1);
+                const val = contextVars[key];
+                return (val !== undefined && val !== null) ? val : 0;
+            });
+
+            // Check for unsafe chars (allow numbers, operators, parens, points, spaces)
+            if (/^[\d+\-*/().\s]+$/.test(parsed)) {
+                // Use Function constructor for safe-ish eval
+                const result = new Function('return ' + parsed)();
+                return isFinite(result) ? result : 0;
+            } else {
+                return 0; // Invalid formula
+            }
+        } catch (e) {
+            return 0;
+        }
+    };
+
+    const cleanNum = (val) => {
+        if (typeof val === 'number') return val;
+        return parseFloat(String(val).replace(/,/g, '')) || 0;
+    };
+
+    // 2. Row Formulas
+    data.rows.forEach(row => {
+        if (!row.formula) return;
+
+        data.cols.forEach(col => {
+            if (col.id === firstColId) return; // Don't overwrite row name
+
+            // Context: Other rows' values in THIS column
+            const context = {};
+            Object.keys(rowMap).forEach(key => {
+                const r = rowMap[key];
+                context[key] = cleanNum(r.cells[col.id]);
+            });
+
+            const res = evalFormula(row.formula, context);
+            row.cells[col.id] = Math.round(res);
+        });
+    });
+
+    // 3. Col Formulas (Runs after Row formulas, so column aggregations include calculated row values)
+    data.cols.forEach(col => {
+        if (!col.formula) return;
+
+        data.rows.forEach(row => {
+            // Context: Other cols' values in THIS row
+            const context = {};
+            Object.keys(colMap).forEach(key => {
+                const c = colMap[key];
+                context[key] = cleanNum(row.cells[c.id]);
+            });
+
+            const res = evalFormula(col.formula, context);
+            row.cells[col.id] = Math.round(res);
+        });
+    });
+}
+
 window.updateUI = updateUI;
 
 // Call checkLockStatus immediately to prevent flash
