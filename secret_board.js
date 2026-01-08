@@ -325,6 +325,8 @@ function renderBlock(blockId, tableId) {
     }
 
     // Body Rows
+    const firstColId = data.cols[0] ? data.cols[0].id : null;
+
     data.rows.forEach((row, rIdx) => {
         const hStyle = row.height ? `height:${row.height}px` : '';
         // Add selection highlight logic for statusSummary
@@ -333,19 +335,28 @@ function renderBlock(blockId, tableId) {
 
         html += `<tr data-row-id="${row.id}" class="${selectClass} transition" style="${hStyle}" onclick="selectStatusRow('${blockId}', '${row.id}')">`;
 
-
         // Row Header (Index or Name?)
         html += `<td class="text-center text-xs text-gray-500 border border-white/10 relative">
              ${rIdx + 1}
              <div class="resizer-h" onmousedown="initResizing(event, '${blockId}', 'row', ${rIdx})"></div>
          </td>`;
 
+        // Check if Row should have difference formatting
+        const rowName = firstColId ? String(row.cells[firstColId] || '') : '';
+        const isRowDiff = rowName.includes('차이') || rowName.includes('손익');
+
         data.cols.forEach((col, cIdx) => {
             const val = row.cells[col.id] === undefined ? '' : row.cells[col.id];
 
             // Formatting Logic for Difference/Profit columns
-            const isDiff = (col.name.includes('차이') || col.name.includes('손익'));
-            const isNumCol = (col.type === 'number' || col.name.includes('금액') || isDiff);
+            const isColDiff = (col.name.includes('차이') || col.name.includes('손익'));
+            const isStandardNum = (col.type === 'number' || col.name.includes('금액'));
+
+            // Apply formatting if Column is Diff OR (Row is Diff AND Column is Numeric)
+            const shouldFormatDiff = isColDiff || (isRowDiff && isStandardNum);
+
+            // Treat as NumCol for parsing purposes
+            const isNumCol = isStandardNum || isColDiff;
 
             let displayVal = val;
             let textColorClass = ""; // Default inherit
@@ -354,7 +365,7 @@ function renderBlock(blockId, tableId) {
                 const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
                 displayVal = num.toLocaleString();
 
-                if (isDiff) {
+                if (shouldFormatDiff) {
                     if (num > 0) {
                         displayVal = '▲ ' + displayVal;
                         textColorClass = "text-red-400 font-bold";
