@@ -315,7 +315,7 @@ function renderBlock(blockId, tableId) {
     const hasSum = data.cols.some(c => c.sum || c.name.includes('금액'));
     // Show sum row for specific blocks regardless of hasSum (to ensure layout consistency), but strictly exclude statusSummary
     if (hasSum || (['assetSummary', 'liabilitySummary', 'assetDetails', 'assetDetails2'].includes(blockId) && data.rows.length > 0)) {
-        html += `<tr class="bg-gray-800/30 font-bold text-blue-300" style="height: 40px;">`;
+        html += `<tr class="bg-blue-900/60 font-bold text-blue-300" style="height: 40px;">`;
         html += `<td class="border border-white/10 p-0"><div class="w-full h-full flex items-center justify-center">∑</div></td>`;
         data.cols.forEach(col => {
             const wStyle = `width:${col.width}px; min-width:${col.width}px`;
@@ -848,6 +848,50 @@ function changeYear(offset) {
     currentYear += offset;
     document.getElementById('sheetYearDisplay').innerText = currentYear;
     // Switch to new year data without reload
+    initSecretBoard();
+}
+
+function copyYearData(direction) {
+    const sourceYear = currentYear;
+    const targetYear = currentYear + direction;
+
+    if (!confirm(`${sourceYear}년도의 모든 데이터(테이블 구조 및 값)를 ${targetYear}년도로 복사하시겠습니까?\n대상 연도의 기존 데이터는 덮어씌워집니다.`)) return;
+
+    // Ensure target year structure exists (init logic handles structure, but we want full overwrite)
+    if (!roadmapData.years[targetYear]) {
+        // Should rely on data.js ensureYearData or similar? 
+        // Assuming roadmapData.years object is open-ended.
+        roadmapData.years[targetYear] = {
+            monthlyMemos: {},
+            variableIncome: new Array(12).fill(0),
+            fixedIncome: new Array(12).fill(0),
+            expenses: new Array(12).fill(0),
+            settlement: {
+                variableIncome: new Array(12).fill(0),
+                fixedIncome: new Array(12).fill(0),
+                expenses: new Array(12).fill(0),
+            },
+            details: {},
+            investment: {},
+            secretBoard: {}
+        };
+    }
+
+    // Deep Copy Logic
+    const sourceSB = roadmapData.years[sourceYear].secretBoard;
+
+    // Create Deep Clone
+    const cloneSB = JSON.parse(JSON.stringify(sourceSB));
+
+    // Assign to Target
+    roadmapData.years[targetYear].secretBoard = cloneSB;
+
+    // Save
+    saveData();
+
+    // Move to that year
+    currentYear = targetYear;
+    document.getElementById('sheetYearDisplay').innerText = currentYear;
     initSecretBoard();
 }
 
