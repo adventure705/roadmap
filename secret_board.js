@@ -236,8 +236,13 @@ function renderBlock(blockId, tableId) {
 
     // Header
     const indexColWidth = data.indexColWidth || 40;
+    const isAllSelected = data.allSelected || false;
+
     html += '<thead><tr class="bg-gray-800/50 text-gray-400">';
-    html += `<th class="text-center border border-white/10 relative" style="width:${indexColWidth}px; min-width:${indexColWidth}px">#
+    html += `<th class="text-center border border-white/10 relative cursor-pointer ${isAllSelected ? 'bg-blue-500/30' : ''}" 
+             style="width:${indexColWidth}px; min-width:${indexColWidth}px"
+             onclick="toggleSelectAll('${blockId}')">
+             #
              <div class="resizer-v" onmousedown="initResizing(event, '${blockId}', 'indexCol', -1)"></div>
              </th>`;
     data.cols.forEach((col, idx) => {
@@ -515,6 +520,15 @@ function executeConfirmModal() {
     closeConfirmModal();
 }
 
+function toggleSelectAll(blockId) {
+    const sb = roadmapData.years[currentYear].secretBoard;
+    if (sb[blockId]) {
+        sb[blockId].allSelected = !sb[blockId].allSelected;
+        saveData();
+        renderBlock(blockId, blockId === 'assetSummary' ? 'tableAssetSummary' : (blockId === 'liabilitySummary' ? 'tableLiabilitySummary' : (blockId === 'statusSummary' ? 'tableStatusSummary' : (blockId === 'assetDetails' ? 'tableAssetDetails' : 'tableAssetDetails2'))));
+    }
+}
+
 function selectStatusRow(blockId, rowId) {
     if (blockId !== 'statusSummary') return;
     const sb = roadmapData.years[currentYear].secretBoard;
@@ -762,16 +776,43 @@ function initResizing(e, blockId, type, idx) {
         const newDim = Math.max(30, startDim + diff);
 
         if (type === 'col') {
-            targetElement.style.width = newDim + 'px';
-            targetElement.style.minWidth = newDim + 'px';
-            sb[blockId].cols[idx].width = newDim;
+            if (sb[blockId].allSelected) {
+                // Resize ALL columns
+                sb[blockId].cols.forEach(c => c.width = newDim);
+                // Update DOM Header Cols
+                const ths = table.querySelectorAll('thead th');
+                // Skip index 0 (Index Col)
+                for (let i = 1; i < ths.length - 1; i++) { // Last is delete col usually? Check renderBlock. 
+                    // renderBlock adds delete col at end.
+                    // cols array corresponds to th indices [1... cols.length]
+                    if (ths[i]) {
+                        ths[i].style.width = newDim + 'px';
+                        ths[i].style.minWidth = newDim + 'px';
+                    }
+                }
+                // Update specific sums row cells if necessary? Usually table-layout:fixed handles it via header width.
+            } else {
+                targetElement.style.width = newDim + 'px';
+                targetElement.style.minWidth = newDim + 'px';
+                sb[blockId].cols[idx].width = newDim;
+            }
         } else if (type === 'indexCol') {
             targetElement.style.width = newDim + 'px';
             targetElement.style.minWidth = newDim + 'px';
-            sb[blockId].indexColWidth = newDim; // Save Index Col Width
+            sb[blockId].indexColWidth = newDim;
         } else {
-            targetElement.style.height = newDim + 'px';
-            sb[blockId].rows[idx].height = newDim;
+            // Row Resize
+            if (sb[blockId].allSelected) {
+                // Resize ALL Rows
+                sb[blockId].rows.forEach(r => r.height = newDim);
+                const trs = table.querySelectorAll('tbody tr');
+                trs.forEach(tr => {
+                    if (tr.dataset.rowId) tr.style.height = newDim + 'px'; // Avoid total row?
+                });
+            } else {
+                targetElement.style.height = newDim + 'px';
+                sb[blockId].rows[idx].height = newDim;
+            }
         }
     };
 
