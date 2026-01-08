@@ -342,15 +342,32 @@ function renderBlock(blockId, tableId) {
 
         data.cols.forEach((col, cIdx) => {
             const val = row.cells[col.id] === undefined ? '' : row.cells[col.id];
-            // Force center alignment
-            const inputClass = "table-input w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none overflow-hidden text-center";
 
-            // For display
+            // Formatting Logic for Difference/Profit columns
+            const isDiff = (col.name.includes('차이') || col.name.includes('손익'));
+            const isNumCol = (col.type === 'number' || col.name.includes('금액') || isDiff);
+
             let displayVal = val;
-            const isNumCol = (col.type === 'number' || col.name.includes('금액'));
-            if (isNumCol && val !== '' && !isNaN(parseInt(String(val).replace(/,/g, '')))) {
-                displayVal = parseInt(String(val).replace(/,/g, '')).toLocaleString();
+            let textColorClass = ""; // Default inherit
+
+            if (isNumCol && val !== '' && !isNaN(parseFloat(String(val).replace(/[^0-9.-]/g, '')))) {
+                const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+                displayVal = num.toLocaleString();
+
+                if (isDiff) {
+                    if (num > 0) {
+                        displayVal = '▲ ' + displayVal;
+                        textColorClass = "text-red-400 font-bold";
+                    } else if (num < 0) {
+                        displayVal = '▼ ' + displayVal.replace('-', '');
+                        textColorClass = "text-blue-400 font-bold";
+                    } else {
+                        textColorClass = "text-gray-400";
+                    }
+                }
             }
+
+            const inputClass = `table-input w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none overflow-hidden text-center ${textColorClass}`;
 
             html += `<td class="border border-white/10 px-1 relative">
                  <textarea class="${inputClass}" onchange="updateCell('${blockId}', ${rIdx}, '${col.id}', this.value)" rows="1" style="height:100%">${displayVal}</textarea>
@@ -374,8 +391,10 @@ function updateCell(blockId, rIdx, colId, val) {
     const sb = roadmapData.years[currentYear].secretBoard;
     const col = sb[blockId].cols.find(c => c.id === colId);
     let value = val;
-    if (col.type === 'number' || col.name.includes('금액')) {
-        value = parseInt(val.replace(/,/g, '')) || 0;
+    if (col.type === 'number' || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익')) {
+        // Strip everything except digits, minus, dot
+        const clean = String(val).replace(/[^0-9.-]/g, '');
+        value = parseFloat(clean) || 0;
     }
     sb[blockId].rows[rIdx].cells[colId] = value;
     saveData();
@@ -841,7 +860,7 @@ function applyFormulas(data) {
 
     const cleanNum = (val) => {
         if (typeof val === 'number') return val;
-        return parseFloat(String(val).replace(/,/g, '')) || 0;
+        return parseFloat(String(val).replace(/[^0-9.-]/g, '')) || 0;
     };
 
     // 2. Row Formulas
