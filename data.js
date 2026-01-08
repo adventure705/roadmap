@@ -218,6 +218,7 @@ function loadData() {
                                         categoryColors: roadmapData.categoryColors || {},
                                         businessNames: roadmapData.businessNames || [],
                                         investment: roadmapData.investment,
+                                        tax_management: roadmapData.tax_management,
                                         management: roadmapData.management || {},
                                         moneyPlan: roadmapData.moneyPlan,
                                         sidebarConfig: roadmapData.sidebarConfig || null
@@ -288,6 +289,7 @@ function syncMemoryToCloud() {
         categoryColors: roadmapData.categoryColors || {},
         businessNames: roadmapData.businessNames || [],
         investment: roadmapData.investment || {},
+        tax_management: roadmapData.tax_management || {},
         management: roadmapData.management || {},
         moneyPlan: roadmapData.moneyPlan || {},
         updatedAt: roadmapData.updatedAt || 0,
@@ -331,6 +333,7 @@ function mergeCloudData(cloudData) {
     if (cloudData.categoryColors) roadmapData.categoryColors = cloudData.categoryColors;
     if (cloudData.businessNames) roadmapData.businessNames = cloudData.businessNames;
     if (cloudData.investment) roadmapData.investment = cloudData.investment;
+    if (cloudData.tax_management) roadmapData.tax_management = cloudData.tax_management;
     if (cloudData.management) roadmapData.management = cloudData.management;
     if (cloudData.moneyPlan) roadmapData.moneyPlan = cloudData.moneyPlan;
     if (cloudData.dashboardSubtitle) roadmapData.dashboardSubtitle = cloudData.dashboardSubtitle;
@@ -476,6 +479,23 @@ function processParsedData(parsed) {
                 if (!inv.block2.rowHeights) inv.block2.rowHeights = [];
                 if (!inv.block2.colWidths) inv.block2.colWidths = [];
                 if (!inv.block2.headerHeight) inv.block2.headerHeight = 0;
+            });
+        }
+
+        // Migrate Tax Management Data
+        if (parsed.tax_management) {
+            roadmapData.tax_management = parsed.tax_management;
+            if (!roadmapData.tax_management.block1) roadmapData.tax_management.block1 = { title: "세금 관리 (일반)", rows: ["항목 1"], cols: ["구분 1"], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [] };
+            if (!roadmapData.tax_management.block2Title) roadmapData.tax_management.block2Title = "세부 내역";
+            if (!roadmapData.tax_management.subtitle) roadmapData.tax_management.subtitle = "세금 납부 및 환급 내역을 체계적으로 관리하세요.";
+            if (!roadmapData.tax_management.investors) roadmapData.tax_management.investors = [
+                { id: 1, name: "기본 관리자", block2: { rows: ["세부 항목 1"], cols: ["구분 1"], data: {} }, years: {} }
+            ];
+            if (!roadmapData.tax_management.currentYear) roadmapData.tax_management.currentYear = 2026;
+
+            // Ensure investors have years object
+            roadmapData.tax_management.investors.forEach(inv => {
+                if (!inv.years) inv.years = {};
             });
         }
 
