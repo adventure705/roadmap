@@ -261,9 +261,10 @@ function renderBlock(blockId, tableId) {
     let totalSum = {};
     data.rows.forEach(row => {
         data.cols.forEach(col => {
-            if ((col.sum || col.name.includes('금액')) && (col.type === 'number' || col.name.includes('금액'))) {
+            if ((col.sum || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익')) && (col.type === 'number' || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익'))) {
                 const val = row.cells[col.id];
-                const num = parseInt(String(val || 0).replace(/,/g, '')) || 0;
+                // Use updated cleanNum logic in spirit (strip formatting)
+                const num = parseFloat(String(val || 0).replace(/[^0-9.-]/g, '')) || 0;
                 totalSum[col.id] = (totalSum[col.id] || 0) + num;
             }
         });
@@ -318,12 +319,24 @@ function renderBlock(blockId, tableId) {
         html += `<td class="border border-white/10 p-0"><div class="w-full h-full flex items-center justify-center">∑</div></td>`;
         data.cols.forEach(col => {
             const wStyle = `width:${col.width}px; min-width:${col.width}px`;
-            if (col.sum || col.name.includes('금액')) {
+            if (col.sum || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익')) {
                 const s = totalSum[col.id] || 0;
+                // Apply difference formatting to total as well if needed? User said "Intersection shows value".
+                // Let's format it nicely.
+                let displayS = s.toLocaleString();
+                let colorClass = "text-white";
+
+                const isDiff = col.name.includes('차이') || col.name.includes('손익');
+                if (isDiff) {
+                    if (s > 0) { displayS = '▲ ' + displayS; colorClass = "text-red-400"; }
+                    else if (s < 0) { displayS = '▼ ' + displayS.replace('-', ''); colorClass = "text-blue-400"; }
+                    else { colorClass = "text-gray-400"; }
+                }
+
                 // Wrap in div to handle padding/alignment despite table cell padding:0 rules
                 html += `<td class="border border-white/10 p-0" style="${wStyle}">
-                    <div class="w-full h-full flex items-center justify-center px-2 overflow-hidden text-ellipsis whitespace-nowrap">
-                        ${s.toLocaleString()}
+                    <div class="w-full h-full flex items-center justify-center px-2 overflow-hidden text-ellipsis whitespace-nowrap ${colorClass}">
+                        ${displayS}
                     </div>
                 </td>`;
             } else {
