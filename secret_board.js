@@ -851,16 +851,72 @@ function changeYear(offset) {
     initSecretBoard();
 }
 
+// --- Selective Copy Logic ---
+let pendingCopyDirection = 0;
+
 function copyYearData(direction) {
+    pendingCopyDirection = direction;
+    openCopySelectionModal();
+}
+
+function openCopySelectionModal() {
+    const modal = document.getElementById('copySelectionModal');
+    if (!modal) return;
+
+    // Set Target Year Text
+    const targetYear = currentYear + pendingCopyDirection;
+    document.getElementById('copyTargetYearDisplay').innerText = targetYear;
+
+    // Render List
+    const list = document.getElementById('copyBlockList');
+    list.innerHTML = '';
+
+    const sb = roadmapData.years[currentYear].secretBoard;
+    const blocks = [
+        { id: 'statusSummary', label: '주요 현황' },
+        { id: 'assetSummary', label: sb.assetSummary.title || '자산 요약' },
+        { id: 'liabilitySummary', label: sb.liabilitySummary.title || '부채 요약' },
+        { id: 'assetDetails', label: sb.assetDetails.title || '자산 상세 내역' },
+        { id: 'assetDetails2', label: sb.assetDetails2.title || '자산 상세 내역 2' }
+    ];
+
+    blocks.forEach(b => {
+        list.innerHTML += `
+            <label class="flex items-center gap-3 p-3 bg-gray-800 rounded border border-white/5 cursor-pointer hover:bg-gray-700 transition">
+                <input type="checkbox" class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-offset-gray-900" 
+                    value="${b.id}" checked>
+                <span class="text-gray-300 font-medium">${b.label}</span>
+            </label>
+        `;
+    });
+
+    modal.classList.remove('hidden');
+}
+
+function closeCopySelectionModal() {
+    document.getElementById('copySelectionModal').classList.add('hidden');
+}
+
+function confirmCopySelected() {
+    const list = document.getElementById('copyBlockList');
+    const checkboxes = list.querySelectorAll('input[type="checkbox"]:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+
+    if (selectedIds.length === 0) {
+        alert('복사할 항목을 하나 이상 선택해주세요.');
+        return;
+    }
+
+    performCopy(selectedIds);
+    closeCopySelectionModal();
+}
+
+function performCopy(blockIds) {
     const sourceYear = currentYear;
-    const targetYear = currentYear + direction;
+    const targetYear = currentYear + pendingCopyDirection;
 
-    if (!confirm(`${sourceYear}년도의 모든 데이터(테이블 구조 및 값)를 ${targetYear}년도로 복사하시겠습니까?\n대상 연도의 기존 데이터는 덮어씌워집니다.`)) return;
-
-    // Ensure target year structure exists (init logic handles structure, but we want full overwrite)
+    // Ensure Target Year Structure
     if (!roadmapData.years[targetYear]) {
-        // Should rely on data.js ensureYearData or similar? 
-        // Assuming roadmapData.years object is open-ended.
         roadmapData.years[targetYear] = {
             monthlyMemos: {},
             variableIncome: new Array(12).fill(0),
@@ -876,23 +932,24 @@ function copyYearData(direction) {
             secretBoard: {}
         };
     }
+    // Ensure SecretBoard Object exists in target
+    if (!roadmapData.years[targetYear].secretBoard) {
+        roadmapData.years[targetYear].secretBoard = {};
+    }
 
-    // Deep Copy Logic
     const sourceSB = roadmapData.years[sourceYear].secretBoard;
+    const targetSB = roadmapData.years[targetYear].secretBoard;
 
-    // Create Deep Clone
-    const cloneSB = JSON.parse(JSON.stringify(sourceSB));
+    blockIds.forEach(id => {
+        if (sourceSB[id]) {
+            // Deep Copy
+            targetSB[id] = JSON.parse(JSON.stringify(sourceSB[id]));
+        }
+    });
 
-    // Assign to Target
-    roadmapData.years[targetYear].secretBoard = cloneSB;
-
-    // Save
     saveData();
-
-    // Move to that year
-    currentYear = targetYear;
-    document.getElementById('sheetYearDisplay').innerText = currentYear;
-    initSecretBoard();
+    changeYear(pendingCopyDirection); // Move to target year to show results
+    alert(`${targetYear}년도로 ${blockIds.length}개 항목이 복사되었습니다.`);
 }
 
 // --- Lock Screen Logic ---
