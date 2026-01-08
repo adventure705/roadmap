@@ -1,19 +1,21 @@
 const defaultMenuConfig = [
     { type: 'item', id: 'dashboard', label: '대시보드', icon: '📊', link: 'dashboard.html' },
     { type: 'item', id: 'roadmap', label: '단기 로드맵', icon: '📅', link: 'roadmap.html' },
-    { type: 'item', id: 'moneyPlan', label: '머니 플랜', icon: '💰', link: 'money_plan.html' },
     { type: 'header', label: '지출 관리' },
     { type: 'item', id: 'fixed', label: '고정 지출', icon: '🔒', link: 'fixed_expenses.html' },
     { type: 'item', id: 'variable', label: '변동 지출', icon: '🛒', link: 'variable_expenses.html' },
-    { type: 'item', id: 'installments', label: '할부', icon: '💳', link: 'installments.html' },
     { type: 'item', id: 'cash', label: '현금 지출', icon: '💸', link: 'cash_expenses.html' },
+    { type: 'item', id: 'installments', label: '할부', icon: '💳', link: 'installments.html' },
     { type: 'item', id: 'settlement', label: '지출 예정산', icon: '💰', link: 'settlement.html' },
     { type: 'header', label: '수입 관리' },
-    { type: 'item', id: 'income', label: '수입', icon: '💰', link: 'income.html' },
+    { type: 'item', id: 'income', label: '총 수입', icon: '💰', link: 'income.html' },
     { type: 'item', id: 'investment', label: '투자 수입', icon: '📈', link: 'investment.html' },
+    { type: 'item', id: 'business', label: '사업 수입', icon: '💼', link: 'business.html' },
+    { type: 'item', id: 'other_income', label: '기타 수입', icon: '📥', link: 'other_income.html' },
+    { type: 'header', label: '연 관리' },
+    { type: 'item', id: 'tax', label: '세금 관리', icon: '📄', link: 'tax.html' },
+    { type: 'item', id: 'moneyPlan', label: '머니 플랜', icon: '💰', link: 'money_plan.html' },
     { type: 'item', id: 'secret_board', label: '시크릿 보드', icon: '🚩', link: 'secret_board.html' },
-    { type: 'header', label: '사업 관리' },
-    { type: 'item', id: 'business', label: '사업 관리', icon: '💼', link: 'business.html' },
     { type: 'header', label: '정보 관리' },
     { type: 'item', id: 'management', label: '정보 관리', icon: '📋', link: 'management.html' }
 ];
@@ -374,7 +376,7 @@ window.renderMemos = function (containerId = 'memoContainer') {
 
     let html = '<div class="flex flex-col lg:flex-row gap-4 w-full">';
     // 1. Common Memo
-    const validMonthlyTabs = ['fixed', 'variable', 'income', 'cash', 'settlement', 'dashboard'];
+    const validMonthlyTabs = ['fixed', 'variable', 'other_income', 'income', 'cash', 'settlement', 'dashboard'];
     const isFullWidthCommon = (currentPageType === 'secret_board' || !validMonthlyTabs.includes(currentPageType));
     html += `
     <div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 flex-1 min-w-0 ${isFullWidthCommon ? 'w-full' : 'lg:min-w-[300px]'}">

@@ -453,7 +453,7 @@ function openAddItemModal(itemId = null) {
         // Bank Label
         const bankSelect = document.getElementById('addItemBank');
         if (bankSelect && bankSelect.previousElementSibling && bankSelect.previousElementSibling.tagName === 'LABEL') {
-            bankSelect.previousElementSibling.innerText = (currentPageType === 'income') ? '입금계좌' : '출금계좌';
+            bankSelect.previousElementSibling.innerText = (currentPageType === 'income' || currentPageType === 'other_income') ? '입금계좌' : '출금계좌';
         }
 
         // Re-populate Dropdowns (Always refreshing is safer to ensure sync)
@@ -466,7 +466,7 @@ function openAddItemModal(itemId = null) {
             const banks = roadmapData.bankAccounts[currentPageType] || [];
             bankSelect.innerHTML = `<option value="">선택(없음)</option>` + banks.map(b => `<option value="${b}">${b}</option>`).join('');
         }
-        if (cardSelect && currentPageType !== 'income') {
+        if (cardSelect && (currentPageType !== 'income' && currentPageType !== 'other_income')) {
             const cards = roadmapData.cards[currentPageType] || [];
             cardSelect.innerHTML = `<option value="">선택(없음)</option>` + cards.map(c => `<option value="${c}">${c}</option>`).join('');
         }
@@ -489,7 +489,7 @@ function openAddItemModal(itemId = null) {
             }
             if (catSelect) catSelect.value = item.category || '';
             if (bankSelect) bankSelect.value = item.bankAccount || '';
-            if (cardSelect && currentPageType !== 'income') cardSelect.value = item.card || '';
+            if (cardSelect && (currentPageType !== 'income' && currentPageType !== 'other_income')) cardSelect.value = item.card || '';
 
             if (currentPageType === 'cash' && dateInput) {
                 dateInput.value = item.date || '';
@@ -501,6 +501,7 @@ function openAddItemModal(itemId = null) {
             if (saveBtn) saveBtn.innerText = '저장';
             let defaultTitle = '변동 지출 내역 추가';
             if (currentPageType === 'income') defaultTitle = '수입 내역 추가';
+            else if (currentPageType === 'other_income') defaultTitle = '기타 수입 내역 추가';
             else if (currentPageType === 'cash') defaultTitle = '현금 지출 내역 추가';
             else if (currentPageType === 'fixed') defaultTitle = '고정 지출 내역 추가';
             if (title) title.innerText = defaultTitle;
@@ -556,7 +557,7 @@ function confirmAddItem() {
             item.values[currentMonth] = amount;
             item.category = category;
             item.bankAccount = bankAccount;
-            if (currentPageType !== 'income') item.card = card;
+            if (currentPageType !== 'income' && currentPageType !== 'other_income') item.card = card;
             if (currentPageType === 'cash') {
                 item.date = date;
                 item.content = content;
@@ -586,7 +587,7 @@ function confirmAddItem() {
             category: category,
             content: content,
             bankAccount: bankAccount,
-            card: (currentPageType !== 'income') ? card : '',
+            card: (currentPageType !== 'income' && currentPageType !== 'other_income') ? card : '',
             date: date
         };
         item.values[currentMonth] = amount;
@@ -707,7 +708,7 @@ function renderMonthlyTable() {
     };
 
     const isCash = currentPageType === 'cash';
-    const isIncome = currentPageType === 'income';
+    const isIncome = currentPageType === 'income' || currentPageType === 'other_income';
 
     // Header Construction
     let headerHTML = '';

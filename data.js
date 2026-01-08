@@ -13,14 +13,15 @@ let roadmapData = {
             income: [],      // { id, name, values: [12] }
             fixed: [],       // { id, name, values: [12] }
             variable: [],    // { id, name, values: [12] }
+            other_income: [], // { id, name, values: [12] }
             installment: [], // { id, name, values: [12] }
             cash: [],        // { id, name, values: [12] }
             settlement: [],
             business: []
         },
         monthlyMemos: Array.from({ length: 12 }, () => ({
-            fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: [],
-            investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
+            fixed: [], variable: [], other_income: [], income: [], cash: [], installment: [], settlement: [], business: [],
+            investment: [], tax_management: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
         }))
     }),
     years: {
@@ -33,10 +34,10 @@ let roadmapData = {
                 fixedIncome: new Array(12).fill(0),
                 expenses: new Array(12).fill(0)
             },
-            details: { income: [], fixed: [], variable: [], installment: [], cash: [], settlement: [], business: [] },
+            details: { income: [], fixed: [], variable: [], other_income: [], installment: [], cash: [], settlement: [], business: [] },
             monthlyMemos: Array.from({ length: 12 }, () => ({
-                fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: [],
-                investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
+                fixed: [], variable: [], other_income: [], income: [], cash: [], installment: [], settlement: [], business: [],
+                investment: [], tax_management: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
             }))
         }
     },
@@ -44,6 +45,7 @@ let roadmapData = {
     categories: {
         fixed: ['구독', '고정비용', '대출이자'],
         variable: ['식비', '교통비', '쇼핑'],
+        other_income: ['기타 수입'],
         income: ['월급', '부수입'],
         cash: ['용돈'],
         installment: ['가전', '가구'],
@@ -52,6 +54,7 @@ let roadmapData = {
     bankAccounts: {
         fixed: ['국민은행', '신한은행'],
         variable: ['국민은행', '카카오뱅크'],
+        other_income: ['국민은행'],
         income: ['국민은행'],
         cash: [],
         installment: ['현대카드', '삼성카드'], // Usually cards, but structure asks for accounts?
@@ -60,14 +63,15 @@ let roadmapData = {
     cards: {
         fixed: ['현대카드', '삼성카드'],
         variable: ['현대카드', '삼성카드'],
+        other_income: [],
         income: [],
         cash: [],
         installment: ['현대카드', '삼성카드'],
         settlement: ['현대카드', '삼성카드']
     },
     commonMemos: {
-        fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [],
-        business: [], investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
+        fixed: [], variable: [], other_income: [], income: [], cash: [], installment: [], settlement: [],
+        business: [], investment: [], tax_management: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
     },
     categoryOperators: {},
     categoryColors: {},
@@ -77,6 +81,16 @@ let roadmapData = {
         block1: { title: "투자 현황 (일반)", corner: "", rows: [], cols: [], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [], headerHeight: 0 },
         block2Title: "투자자별 내역",
         investors: []
+    },
+    tax_management: {
+        subtitle: "세금 납부 및 환급 내역을 체계적으로 관리하세요.",
+        block1: { title: "세금 관리 (일반)", corner: "", rows: [], cols: [], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [], headerHeight: 0 },
+        block2Title: "세부 내역",
+        investors: [
+            { id: 1, name: "기본 관리자", years: {} }
+        ],
+        selectedInvestorId: 1,
+        currentYear: 2026
     },
     management: {
         block1: { title: "정보 관리 리스트", rows: ["계좌 1", "카드 1"], cols: ["구분", "번호/내용", "메모"], data: {}, rowColors: [], colColors: [], rowHeights: [], colWidths: [] }
@@ -95,7 +109,9 @@ let roadmapData = {
         settlement: { monthly: {} }
     },
     dashboardSubtitle: "자산 흐름 요약",
-    pageTitles: {},
+    pageTitles: {
+        'tax_management': '세금 관리'
+    },
     sidebarConfig: null, // 초기에는 null로 두어 클라우드 데이터 대기
     updatedAt: 0
 };
@@ -369,6 +385,7 @@ function processParsedData(parsed) {
             config.push({ type: 'item', id: 'business', label: '사업 관리', icon: '💼', link: 'business.html' });
         }
         checkAndAdd('investment', { type: 'item', id: 'investment', label: '투자 수입', icon: '📈', link: 'investment.html' }, 'income');
+        checkAndAdd('other_income', { type: 'item', id: 'other_income', label: '기타 수입', icon: '📥', link: 'other_income.html' }, 'income');
         checkAndAdd('secret_board', { type: 'item', id: 'secret_board', label: '시크릿 보드', icon: '🚩', link: 'secret_board.html' }, 'investment');
         if (!config.find(item => item.id === 'management')) {
             config.push({ type: 'header', label: '정보 관리' });
@@ -386,7 +403,7 @@ function processParsedData(parsed) {
             if (Array.isArray(parsed.categories)) {
                 const shared = parsed.categories;
                 roadmapData.categories = {
-                    fixed: [...shared], variable: [...shared], income: [...shared], cash: [...shared], installment: [...shared],
+                    fixed: [...shared], variable: [...shared], other_income: [...shared], income: [...shared], cash: [...shared], installment: [...shared],
                     settlement: ['식자재', '배달', '외식', '대중교통', '택시', '물품구입비', '자기계발비', '꾸밈비', '의료건강비', '사회생활비', '문화생활비', '경조사', '예비비']
                 };
             } else {
@@ -394,6 +411,7 @@ function processParsedData(parsed) {
                 if (!roadmapData.categories.settlement) {
                     roadmapData.categories.settlement = ['식자재', '배달', '외식', '대중교통', '택시', '물품구입비', '자기계발비', '꾸밈비', '의료건강비', '사회생활비', '문화생활비', '경조사', '예비비'];
                 }
+                if (!roadmapData.categories.other_income) roadmapData.categories.other_income = ['기타 수입'];
             }
         }
 
@@ -402,11 +420,12 @@ function processParsedData(parsed) {
             if (Array.isArray(parsed.bankAccounts)) {
                 const shared = parsed.bankAccounts;
                 roadmapData.bankAccounts = {
-                    fixed: [...shared], variable: [...shared], income: [...shared], cash: [...shared], installment: [...shared]
+                    fixed: [...shared], variable: [...shared], other_income: [...shared], income: [...shared], cash: [...shared], installment: [...shared]
                 };
             } else {
                 roadmapData.bankAccounts = parsed.bankAccounts;
                 if (!roadmapData.bankAccounts.settlement) roadmapData.bankAccounts.settlement = [];
+                if (!roadmapData.bankAccounts.other_income) roadmapData.bankAccounts.other_income = [];
             }
         }
 
@@ -415,13 +434,14 @@ function processParsedData(parsed) {
             if (Array.isArray(parsed.cards)) {
                 const shared = parsed.cards;
                 roadmapData.cards = {
-                    fixed: [...shared], variable: [...shared], income: [...shared], cash: [...shared], installment: [...shared],
+                    fixed: [...shared], variable: [...shared], other_income: [...shared], income: [...shared], cash: [...shared], installment: [...shared],
                     business: []
                 };
             } else {
                 roadmapData.cards = parsed.cards;
                 if (!roadmapData.cards.settlement) roadmapData.cards.settlement = [];
                 if (!roadmapData.cards.business) roadmapData.cards.business = [];
+                if (!roadmapData.cards.other_income) roadmapData.cards.other_income = [];
             }
         }
 
@@ -498,8 +518,9 @@ function processParsedData(parsed) {
         for (const y in yearsData) {
             // Ensure details exist
             if (!yearsData[y].details) {
-                yearsData[y].details = { income: [], fixed: [], variable: [], installment: [], cash: [], settlement: [], business: [] };
+                yearsData[y].details = { income: [], fixed: [], variable: [], other_income: [], installment: [], cash: [], settlement: [], business: [] };
             }
+            if (!yearsData[y].details.other_income) yearsData[y].details.other_income = [];
             if (!yearsData[y].details.settlement) yearsData[y].details.settlement = [];
             if (!yearsData[y].details.business) yearsData[y].details.business = []; // Ensure business exists
 
@@ -507,13 +528,13 @@ function processParsedData(parsed) {
             const oldMemos = yearsData[y].monthlyMemos;
             if (!oldMemos) {
                 yearsData[y].monthlyMemos = Array.from({ length: 12 }, () => ({
-                    fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: [],
+                    fixed: [], variable: [], other_income: [], income: [], cash: [], installment: [], settlement: [], business: [],
                     investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
                 }));
             } else if (!Array.isArray(oldMemos) && typeof oldMemos === 'object') {
                 // Migrate from Object Keyed by month names ("1월"...) to Array
                 const newMemosArr = Array.from({ length: 12 }, () => ({
-                    fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: [],
+                    fixed: [], variable: [], other_income: [], income: [], cash: [], installment: [], settlement: [], business: [],
                     investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
                 }));
                 roadmapData.months.forEach((monthName, idx) => {
@@ -525,7 +546,7 @@ function processParsedData(parsed) {
             } else if (Array.isArray(oldMemos)) {
                 // Ensure all keys exist in each slot
                 oldMemos.forEach(m => {
-                    const keys = ['fixed', 'variable', 'income', 'cash', 'installment', 'settlement', 'business', 'investment', 'roadmap', 'management', 'secret_board', 'moneyPlan', 'dashboard'];
+                    const keys = ['fixed', 'variable', 'other_income', 'income', 'cash', 'installment', 'settlement', 'business', 'investment', 'tax_management', 'roadmap', 'management', 'secret_board', 'moneyPlan', 'dashboard'];
                     keys.forEach(k => { if (!m[k]) m[k] = []; });
                 });
             }
@@ -545,7 +566,7 @@ roadmapData.createYearData = () => ({
         expenses: new Array(12).fill(0)
     },
     details: {
-        income: [], fixed: [], variable: [], installment: [], cash: [], settlement: [], business: []
+        income: [], fixed: [], variable: [], other_income: [], installment: [], cash: [], settlement: [], business: []
     },
     // New Settlement Specific Data for Budgets and Rules
     settlementData: {
@@ -555,7 +576,7 @@ roadmapData.createYearData = () => ({
         rules: {}
     },
     monthlyMemos: Array.from({ length: 12 }, () => ({
-        fixed: [], variable: [], income: [], cash: [], installment: [], settlement: [], business: [],
+        fixed: [], variable: [], other_income: [], income: [], cash: [], installment: [], settlement: [], business: [],
         investment: [], roadmap: [], management: [], secret_board: [], moneyPlan: [], dashboard: []
     })),
     moneyPlan: {
@@ -620,6 +641,7 @@ function renderPageTitle(pageKey) {
     const defaultTitles = {
         'fixed': '고정 지출 관리',
         'variable': '변동 지출 관리',
+        'other_income': '기타 수입 관리',
         'income': '수입 관리',
         'cash': '현금 지출 관리',
         'installment': '할부 관리',
