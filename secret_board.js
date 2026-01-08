@@ -235,11 +235,15 @@ function renderBlock(blockId, tableId) {
 
 
     // Header
+    const indexColWidth = data.indexColWidth || 40;
     html += '<thead><tr class="bg-gray-800/50 text-gray-400">';
-    html += `<th class="w-10 text-center border border-white/10">#</th>`;
+    html += `<th class="text-center border border-white/10 relative" style="width:${indexColWidth}px; min-width:${indexColWidth}px">#
+             <div class="resizer-v" onmousedown="initResizing(event, '${blockId}', 'indexCol', -1)"></div>
+             </th>`;
     data.cols.forEach((col, idx) => {
         const wStyle = `width:${col.width}px; min-width:${col.width}px`;
-        html += `<th class="border border-white/10 px-2 py-3 text-center relative group" style="${wStyle}">
+        const bgStyle = col.color ? `background-color:${col.color}20` : ''; // 20 hex alpha for header
+        html += `<th class="border border-white/10 px-2 py-3 text-center relative group" style="${wStyle}; ${bgStyle}">
             <input type="text" class="header-input w-full bg-transparent text-center font-bold text-gray-300 focus:text-white transition"
                    value="${col.name}" onchange="updateColName('${blockId}', ${idx}, this.value)">
             <div class="resizer-v" onmousedown="initResizing(event, '${blockId}', 'col', ${idx})"></div>
@@ -380,7 +384,15 @@ function renderBlock(blockId, tableId) {
 
             const inputClass = `table-input w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none overflow-hidden text-center ${textColorClass}`;
 
-            html += `<td class="border border-white/10 px-1 relative">
+            // Background Color Logic
+            // Row color takes precedence, or mix? Let's treat them as partial fills.
+            // If row has color, it applies to row. If col has color, it applies to col.
+            // Intersection? Row color wins.
+            let cellBgStyle = '';
+            if (row.color) cellBgStyle = `background-color:${row.color}30;`; // 30 hex alpha
+            else if (col.color) cellBgStyle = `background-color:${col.color}15;`; // 15 hex alpha
+
+            html += `<td class="border border-white/10 px-1 relative" style="${cellBgStyle}">
                  <textarea class="${inputClass}" onchange="updateCell('${blockId}', ${rIdx}, '${col.id}', this.value)" rows="1" style="height:100%">${displayVal}</textarea>
              </td>`;
         });
@@ -579,6 +591,7 @@ function renderStructureLists() {
              ondrop="handleDrop(event, 'col', ${idx})">
             <span class="text-gray-400 font-bold w-4">${idx + 1}</span>
             <input type="text" class="flex-1 bg-gray-800 border border-gray-600 rounded px-1 text-white" value="${col.name}" onchange="updateStructCol(${idx}, 'name', this.value)">
+            <input type="color" class="w-6 h-6 p-0 border-0 bg-transparent cursor-pointer" value="${col.color || '#000000'}" onchange="updateStructCol(${idx}, 'color', this.value)" title="열 색상">
             <label class="flex items-center gap-1 cursor-pointer">
                 <input type="checkbox" ${col.sum ? 'checked' : ''} onchange="updateStructCol(${idx}, 'sum', this.checked)">
                 <span class="text-[10px] text-blue-300">합계</span>
@@ -607,6 +620,7 @@ function renderStructureLists() {
             ondrop="handleDrop(event, 'row', ${idx})">
             <span class="text-gray-400 font-bold w-6 text-center">${idx + 1}</span>
             <div class="flex-1 text-gray-300 truncate font-medium">${rowName}</div>
+            <input type="color" class="w-6 h-6 p-0 border-0 bg-transparent cursor-pointer" value="${row.color || '#000000'}" onchange="updateStructRow(${idx}, 'color', this.value)" title="행 색상">
             <button onclick="editStructRowFormula(${idx})" 
                 class="w-6 h-6 rounded flex items-center justify-center transition ${hasFormula ? 'bg-purple-600 text-white' : 'bg-gray-600 text-gray-400 hover:text-white'}" 
                 title="${hasFormula ? '수식: ' + row.formula : '수식 설정'}">ƒ</button>
@@ -679,6 +693,13 @@ function updateStructCol(idx, key, val) {
     renderAllBlocks(); // Live update
 }
 
+function updateStructRow(idx, key, val) {
+    const sb = roadmapData.years[currentYear].secretBoard;
+    sb[activeStructBlock].rows[idx][key] = val;
+    saveData();
+    renderAllBlocks(); // Live update
+}
+
 function deleteStructCol(idx) {
     if (!confirm('열을 삭제하시겠습니까? 데이터가 손실됩니다.')) return;
     const sb = roadmapData.years[currentYear].secretBoard;
@@ -719,6 +740,10 @@ function initResizing(e, blockId, type, idx) {
         // So target is idx + 1.
         targetElement = ths[idx + 1];
         startDim = targetElement ? targetElement.offsetWidth : 100;
+    } else if (type === 'indexCol') {
+        const ths = table.querySelectorAll('thead th');
+        targetElement = ths[0]; // The first '#' column
+        startDim = targetElement ? targetElement.offsetWidth : 40;
     } else {
         const trs = table.querySelectorAll('tbody tr');
         // There might be a total row at the bottom, but idx is row index, so it matches.
@@ -733,13 +758,17 @@ function initResizing(e, blockId, type, idx) {
     textareas.forEach(ta => ta.style.pointerEvents = 'none');
 
     const onMouseMove = (moveE) => {
-        const diff = (type === 'col' ? moveE.pageX : moveE.pageY) - startPos;
+        const diff = (type === 'col' || type === 'indexCol' ? moveE.pageX : moveE.pageY) - startPos;
         const newDim = Math.max(30, startDim + diff);
 
         if (type === 'col') {
             targetElement.style.width = newDim + 'px';
             targetElement.style.minWidth = newDim + 'px';
             sb[blockId].cols[idx].width = newDim;
+        } else if (type === 'indexCol') {
+            targetElement.style.width = newDim + 'px';
+            targetElement.style.minWidth = newDim + 'px';
+            sb[blockId].indexColWidth = newDim; // Save Index Col Width
         } else {
             targetElement.style.height = newDim + 'px';
             sb[blockId].rows[idx].height = newDim;
