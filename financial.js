@@ -442,12 +442,10 @@ function openAddItemModal(itemId = null) {
         const dateInput = document.getElementById('addItemDate');
 
         // Default View State
-        if (dateDiv) dateDiv.style.display = (currentPageType === 'cash') ? 'block' : 'none';
+        if (dateDiv) dateDiv.style.display = (currentPageType === 'cash' || currentPageType === 'other_income') ? 'block' : 'none';
 
-        // Card Input Visibility
-        const cardSelect = document.getElementById('addItemCard');
         if (cardSelect && cardSelect.parentElement) {
-            cardSelect.parentElement.style.display = (currentPageType === 'income' || currentPageType === 'fixed' || currentPageType === 'variable' || currentPageType === 'cash') ? 'none' : 'block';
+            cardSelect.parentElement.style.display = (currentPageType === 'income' || currentPageType === 'other_income' || currentPageType === 'fixed' || currentPageType === 'variable' || currentPageType === 'cash') ? 'none' : 'block';
         }
 
         // Bank Label
@@ -507,7 +505,7 @@ function openAddItemModal(itemId = null) {
             if (title) title.innerText = defaultTitle;
 
             // Default Dater
-            if (currentPageType === 'cash' && dateInput) {
+            if ((currentPageType === 'cash' || currentPageType === 'other_income') && dateInput) {
                 const today = new Date();
                 const year = currentYear;
                 const month = String(currentMonth + 1).padStart(2, '0');
@@ -541,7 +539,7 @@ function confirmAddItem() {
     const card = document.getElementById('addItemCard') ? document.getElementById('addItemCard').value : '';
     const content = document.getElementById('addItemContent') ? document.getElementById('addItemContent').value.trim() : '';
     const dateInput = document.getElementById('addItemDate');
-    const date = (dateInput && currentPageType === 'cash') ? dateInput.value : '';
+    const date = (dateInput && (currentPageType === 'cash' || currentPageType === 'other_income')) ? dateInput.value : '';
 
     if (!name) { alert('항목 이름을 입력해주세요.'); return; }
     if (amount <= 0 && !editId) { alert('금액은 0보다 커야 합니다.'); return; } // Allow 0 edits? maybe not.
@@ -558,7 +556,7 @@ function confirmAddItem() {
             item.category = category;
             item.bankAccount = bankAccount;
             if (currentPageType !== 'income' && currentPageType !== 'other_income') item.card = card;
-            if (currentPageType === 'cash') {
+            if (currentPageType === 'cash' || currentPageType === 'other_income') {
                 item.date = date;
                 item.content = content;
             }
@@ -708,12 +706,13 @@ function renderMonthlyTable() {
     };
 
     const isCash = currentPageType === 'cash';
+    const showDateContent = currentPageType === 'cash' || currentPageType === 'other_income';
     const isIncome = currentPageType === 'income' || currentPageType === 'other_income';
 
     // Header Construction
     let headerHTML = '';
 
-    if (isCash) {
+    if (showDateContent) {
         headerHTML += `<th class="px-6 py-4 bg-gray-800 text-left w-1/6 cursor-pointer" onclick="sortList('date')">날짜${getSortIndicator('date')}</th>`;
     }
 
@@ -722,7 +721,7 @@ function renderMonthlyTable() {
             항목명 ${getSortIndicator('name')}
         </th>`;
 
-    if (isCash) {
+    if (showDateContent) {
         headerHTML += `<th class="px-6 py-2 bg-gray-800 text-left w-1/6 cursor-pointer hover:bg-gray-700 transition select-none" onclick="sortList('content')">
             내용 ${getSortIndicator('content')}
         </th>`;
@@ -792,7 +791,7 @@ function renderMonthlyTable() {
 
     const monthlyTotal = activeList.reduce((sum, item) => sum + item.values[curM], 0);
 
-    const labelColSpan = isCash ? 5 : ((isIncome || currentPageType === 'fixed' || currentPageType === 'variable') ? 3 : 4);
+    const labelColSpan = showDateContent ? 5 : ((isIncome || currentPageType === 'fixed' || currentPageType === 'variable') ? 3 : 4);
 
     // Total Row (Top)
     bodyHTML += `<tr class="bg-gray-800/80 font-bold border-b-2 border-white/10">`;
@@ -823,8 +822,8 @@ function renderMonthlyTable() {
                 ondragover="onRowDragOver(event)" 
                 ondrop="onRowDrop(event, '${item.id}')">`;
 
-            // Date (if cash)
-            if (isCash) {
+            // Date (if cash or other_income)
+            if (showDateContent) {
                 bodyHTML += `<td class="px-6 py-3">
         <input type="date" class="bg-transparent text-white text-sm font-medium focus:outline-none focus:border-b focus:border-blue-500"
             value="${currentDate}" onchange="updateItemDate('${item.id}', this.value)">
@@ -837,8 +836,8 @@ function renderMonthlyTable() {
             value="${item.name}" onblur="updateItemName('${item.id}', this.value)" placeholder="항목 이름">
         </td>`;
 
-            // Content (if cash)
-            if (isCash) {
+            // Content (if cash or other_income)
+            if (showDateContent) {
                 bodyHTML += `<td class="px-6 py-1">
         <input type="text" class="w-full bg-transparent text-white text-sm focus:outline-none focus:border-b focus:border-blue-500 transition px-1"
             value="${item.content || ''}" onblur="updateItemContent('${item.id}', this.value)" placeholder="상세 내용">
