@@ -235,7 +235,10 @@ function renderTable(blockId) {
                 let hasValidNum = false;
 
                 const checkAndAdd = (v) => {
-                    if (!isSummableCol(grid.cols[cIdx])) return;
+                    const colRaw = (grid.cols[cIdx] || '').replace(/\s+/g, '');
+                    if (colRaw.includes('율') || colRaw.includes('비율')) return;
+
+                    if (!isSummableCol(grid.cols[cIdx]) && !sumRows[rIdx]) return;
                     const raw = String(v || '').replace(/,/g, '').trim();
                     if (raw !== '' && !isNaN(parseFloat(raw))) {
                         sum += parseFloat(raw);
