@@ -410,15 +410,14 @@ window.renderMemos = function (containerId = 'memoContainer') {
     }
     html += '</div></div>';
     html += `
-        < style >
-                /* Special scrollbar for tax grid if needed */
-                .lg\\: grid - cols - 3 .text - gray - 300 {
-        max - height: 100px;
-        overflow: hidden;
-        text - overflow: ellipsis;
-    }
-            </style >
-        `;
+    <style>
+        /* Special scrollbar for tax grid if needed */
+        .lg\\:grid-cols-3 .text-gray-300 {
+            max-height: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>`;
 
     // 2. Monthly Memo
     // Allow monthly memos for specific tabs only
@@ -436,7 +435,7 @@ window.renderMemos = function (containerId = 'memoContainer') {
 
         const monthKey = roadmapData.months[currentMonth];
         html += `
-        < div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 flex-1 min-w-0 lg:min-w-[300px]" >
+        <div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 flex-1 min-w-0 lg:min-w-[300px]">
             <div class="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
                 <span class="text-sm font-bold text-blue-400 flex items-center gap-2">📅 ${monthKey} 메모</span>
                 <button onclick="addMemo('monthly')" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-md transition text-gray-300 font-medium ml-4">+ 추가</button>
@@ -459,7 +458,7 @@ window.renderMemos = function (containerId = 'memoContainer') {
                 </div>`;
             });
         }
-        html += '</div></div > ';
+        html += '</div></div>';
     }
     html += '</div>';
     container.innerHTML = html;
