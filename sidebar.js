@@ -384,25 +384,40 @@ window.renderMemos = function (containerId = 'memoContainer') {
             <span class="text-sm font-bold text-yellow-500 flex items-center gap-2">📌 공통 메모</span>
             <button onclick="addMemo('common')" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-md transition text-gray-300 font-medium ml-4">+ 추가</button>
         </div>
-        <div class="space-y-2 max-h-24 overflow-y-auto pr-1 custom-scrollbar">`;
+    const isTaxPage = currentPageType === 'tax_management';
+    const containerClass = isTaxPage 
+        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 h-[150px] overflow-y-auto pr-1 custom-scrollbar" 
+        : "space-y-2 max-h-24 overflow-y-auto pr-1 custom-scrollbar";
 
     if (commonMemos.length === 0) {
         html += '<p class="text-xs text-gray-500 italic py-2 text-center">등록된 공통 메모가 없습니다.</p>';
     } else {
+        html += `< div class="${containerClass}" > `;
         commonMemos.forEach((memo, idx) => {
             const text = typeof memo === 'object' ? memo.text : memo;
             const idParam = typeof memo === 'object' ? `'${memo.id}'` : idx;
             html += `
-            <div class="group bg-gray-900/50 p-2.5 rounded border border-white/5 text-xs flex justify-between items-start gap-2 hover:bg-gray-800/50 transition">
+        < div class="group bg-gray-900/50 p-2.5 rounded border border-white/5 text-xs flex justify-between items-start gap-2 hover:bg-gray-800/50 transition h-fit" >
                 <p class="text-gray-300 whitespace-pre-wrap break-all flex-1 leading-relaxed">${text}</p>
                 <div class="opacity-0 group-hover:opacity-100 flex gap-1 shrink-0 transition-opacity">
                     <button onclick="editMemo('common', ${idParam})" class="text-gray-400 hover:text-white p-1">✎</button>
                     <button onclick="deleteMemo('common', ${idParam})" class="text-red-400 hover:text-red-300 p-1">×</button>
                 </div>
-            </div>`;
+            </div > `;
         });
+        html += `</div > `;
     }
     html += '</div></div>';
+    html += `
+        < style >
+                /* Special scrollbar for tax grid if needed */
+                .lg\\: grid - cols - 3 .text - gray - 300 {
+        max - height: 100px;
+        overflow: hidden;
+        text - overflow: ellipsis;
+    }
+            </style >
+        `;
 
     // 2. Monthly Memo
     // Allow monthly memos for specific tabs only
@@ -420,7 +435,7 @@ window.renderMemos = function (containerId = 'memoContainer') {
 
         const monthKey = roadmapData.months[currentMonth];
         html += `
-        <div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 flex-1 min-w-0 lg:min-w-[300px]">
+        < div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 flex-1 min-w-0 lg:min-w-[300px]" >
             <div class="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
                 <span class="text-sm font-bold text-blue-400 flex items-center gap-2">📅 ${monthKey} 메모</span>
                 <button onclick="addMemo('monthly')" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-md transition text-gray-300 font-medium ml-4">+ 추가</button>
@@ -443,10 +458,10 @@ window.renderMemos = function (containerId = 'memoContainer') {
                 </div>`;
             });
         }
-        html += '</div></div>';
-    }
-    html += '</div>';
-    container.innerHTML = html;
+        html += '</div></div > ';
+}
+html += '</div>';
+container.innerHTML = html;
 };
 
 window.openMemoModal = function (title, initialText, onSave) {
