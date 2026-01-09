@@ -12,16 +12,24 @@ function initTaxPage() {
         roadmapData.tax_management = {
             block1: { rows: ["항목 1"], cols: ["구분 1"], data: {} },
             investors: [
-                { id: 1, name: "기본 관리자", block2: { rows: ["세부 항목 1"], cols: ["구분 1"], data: {} } }
+                { id: 1, name: "기본 관리자", block2: { rows: ["세부 항목 1"], cols: ["구분 1"], data: {} }, years: {} }
             ],
             selectedInvestorId: 1,
-            currentYear: new Date().getFullYear()
+            currentYear: new Date().getFullYear(),
+            yearMemos: {}
         };
     }
     // Ensure currentYear exists if loading from old data
     if (!roadmapData.tax_management.currentYear) {
         roadmapData.tax_management.currentYear = new Date().getFullYear();
     }
+    // Ensure yearMemos exists
+    if (!roadmapData.tax_management.yearMemos) {
+        roadmapData.tax_management.yearMemos = {};
+    }
+
+    // Local state for the Year Memo Block
+    window.currentYearMemoYear = new Date().getFullYear();
 
     renderAll();
 }
@@ -32,7 +40,33 @@ function renderAll() {
     renderInvestorSelect();
     renderTable('block1');
     renderTable('block2');
-    renderMemos();
+    if (typeof renderMemos === 'function') renderMemos(); // Common Memo
+    renderYearMemo(); // New Year Memo
+}
+
+// --- Year Specific Memo Functions ---
+
+function renderYearMemo() {
+    const yearDisplay = document.getElementById('yearMemoDisplay');
+    const input = document.getElementById('yearMemoInput');
+
+    if (yearDisplay) yearDisplay.innerText = window.currentYearMemoYear;
+
+    if (input) {
+        const memo = roadmapData.tax_management.yearMemos[window.currentYearMemoYear] || "";
+        input.value = memo;
+    }
+}
+
+function changeYearMemoYear(delta) {
+    window.currentYearMemoYear += delta;
+    renderYearMemo();
+}
+
+function updateYearMemo(value) {
+    if (!roadmapData.tax_management.yearMemos) roadmapData.tax_management.yearMemos = {};
+    roadmapData.tax_management.yearMemos[window.currentYearMemoYear] = value;
+    saveData();
 }
 
 function renderTitles() {

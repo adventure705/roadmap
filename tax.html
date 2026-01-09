@@ -197,8 +197,31 @@
             </div>
             </header>
 
-            <!-- Memo Container -->
-            <div id="memoContainer" class="mt-1"></div>
+            <!-- Memos: Common & Year Specific -->
+            <div class="flex flex-col lg:flex-row gap-6 mt-1">
+                <!-- Common Memo (Left) -->
+                <div id="memoContainer" class="flex-1"></div>
+
+                <!-- Year Specific Memo (Right) -->
+                <div class="glass-panel rounded-2xl p-6 w-full lg:w-[450px] flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl text-green-400">📅</span>
+                            <span class="font-bold text-lg">연도별 메모</span>
+                        </div>
+                        <div class="flex items-center gap-1 bg-gray-800 rounded-lg p-1 border border-white/10">
+                            <button onclick="changeYearMemoYear(-1)"
+                                class="w-6 h-6 flex items-center justify-center hover:bg-white/10 rounded text-gray-400 hover:text-white transition">◀</button>
+                            <span id="yearMemoDisplay" class="text-sm font-bold px-2 w-12 text-center">2026</span>
+                            <button onclick="changeYearMemoYear(1)"
+                                class="w-6 h-6 flex items-center justify-center hover:bg-white/10 rounded text-gray-400 hover:text-white transition">▶</button>
+                        </div>
+                    </div>
+                    <textarea id="yearMemoInput"
+                        class="w-full flex-1 bg-black/20 border border-white/10 rounded-xl p-4 text-sm resize-none focus:outline-none focus:border-green-500/50 transition min-h-[120px]"
+                        placeholder="해당 연도의 메모를 입력하세요..." onchange="updateYearMemo(this.value)"></textarea>
+                </div>
+            </div>
 
             <!-- Block 1: General Tax Grid -->
             <div class="glass-panel rounded-2xl p-6">
