@@ -374,10 +374,13 @@ window.renderMemos = function (containerId = 'memoContainer') {
         commonMemos = commonMemos[currentPageType] || [];
     }
 
+    // Main Flex Container Start
     let html = '<div class="flex flex-col lg:flex-row gap-4 w-full">';
-    // 1. Common Memo
+
+    // 1. Common Memo Block
     const validMonthlyTabs = ['fixed', 'variable', 'other_income', 'income', 'cash', 'settlement', 'dashboard'];
     const isFullWidthCommon = (currentPageType === 'secret_board' || !validMonthlyTabs.includes(currentPageType));
+
     html += `
     <div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 flex-1 min-w-0 ${isFullWidthCommon ? 'w-full' : 'lg:min-w-[300px]'}">
         <div class="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
@@ -408,10 +411,11 @@ window.renderMemos = function (containerId = 'memoContainer') {
         });
         html += `</div>`;
     }
-    html += '</div></div>';
+    html += '</div>'; // Close Common Memo Block
+
+    // Add styles for grid view truncation if needed
     html += `
     <style>
-        /* Special scrollbar for tax grid if needed */
         .lg\\:grid-cols-3 .text-gray-300 {
             max-height: 100px;
             overflow: hidden;
@@ -419,7 +423,7 @@ window.renderMemos = function (containerId = 'memoContainer') {
         }
     </style>`;
 
-    // 2. Monthly Memo
+    // 2. Monthly Memo Block
     // Allow monthly memos for specific tabs only
     if (validMonthlyTabs.includes(currentPageType)) {
         const monthlyMemosMap = yearData.monthlyMemos || [];
@@ -458,9 +462,10 @@ window.renderMemos = function (containerId = 'memoContainer') {
                 </div>`;
             });
         }
-        html += '</div></div>';
+        html += '</div></div>'; // Close .space-y-2 div AND Monthly Memo Block div
     }
-    html += '</div>';
+
+    html += '</div>'; // Close Main Flex Container
     container.innerHTML = html;
 };
 
