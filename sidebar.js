@@ -392,7 +392,8 @@ window.renderMemos = function (containerId = 'memoContainer') {
     const isFullWidthCommon = (currentPageType === 'secret_board' || !validMonthlyTabs.includes(currentPageType));
     const isBusiness = currentPageType === 'business';
 
-    const commonClass = isFullWidthCommon ? 'w-full' : (isBusiness ? 'flex-1 lg:flex-[2]' : 'flex-1 lg:min-w-[300px]');
+    // Business Layout: 50/50 split. Both use flex-1.
+    const commonClass = isFullWidthCommon ? 'w-full' : 'flex-1 min-w-[300px]';
 
     html += `
     <div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 min-w-0 ${commonClass}">
@@ -446,15 +447,44 @@ window.renderMemos = function (containerId = 'memoContainer') {
         }
     </style>`;
 
-    // 2. Monthly Memo Block
-    // Allow monthly memos for specific tabs only
-    if (validMonthlyTabs.includes(currentPageType)) {
+    // 2. Second Block (Yearly for Business, Monthly for others)
+    if (isBusiness) {
+        // Business: Yearly Memos
+        const yearlyMemos = yearData.yearlyMemos || [];
+
+        html += `
+        <div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 flex-1 min-w-[300px]">
+            <div class="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
+                <span class="text-sm font-bold text-green-400 flex items-center gap-2">📅 ${currentYear}년 메모</span>
+                <button onclick="addMemo('yearly')" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-md transition text-gray-300 font-medium ml-4">+ 추가</button>
+            </div>
+            <div class="space-y-2 max-h-24 overflow-y-auto pr-1 custom-scrollbar">`;
+
+        if (yearlyMemos.length === 0) {
+            html += '<p class="text-xs text-gray-500 italic py-2 text-center">등록된 연간 메모가 없습니다.</p>';
+        } else {
+            yearlyMemos.forEach((memo, idx) => {
+                const text = typeof memo === 'object' ? memo.text : memo;
+                const idParam = typeof memo === 'object' ? `'${memo.id}'` : idx;
+                html += `
+                <div class="group bg-gray-900/50 p-2.5 rounded border border-white/5 text-xs flex justify-between items-start gap-2 hover:bg-gray-800/50 transition">
+                    <p class="text-gray-300 whitespace-pre-wrap break-all flex-1 leading-relaxed">${text}</p>
+                    <div class="opacity-0 group-hover:opacity-100 flex gap-1 shrink-0 transition-opacity">
+                        <button onclick="editMemo('yearly', ${idParam})" class="text-gray-400 hover:text-white p-1">✎</button>
+                        <button onclick="deleteMemo('yearly', ${idParam})" class="text-red-400 hover:text-red-300 p-1">×</button>
+                    </div>
+                </div>`;
+            });
+        }
+        html += '</div></div>';
+
+    } else if (validMonthlyTabs.includes(currentPageType)) {
+        // Standard Monthly Memos
         const monthlyMemosMap = yearData.monthlyMemos || [];
         const memosForMonth = monthlyMemosMap[currentMonth] || {};
         let monthlyMemos = [];
 
         if (Array.isArray(memosForMonth)) {
-            // Legacy support or fallback
             monthlyMemos = memosForMonth;
         } else if (typeof memosForMonth === 'object') {
             monthlyMemos = memosForMonth[currentPageType] || [];
@@ -485,7 +515,7 @@ window.renderMemos = function (containerId = 'memoContainer') {
                 </div>`;
             });
         }
-        html += '</div></div>'; // Close .space-y-2 div AND Monthly Memo Block div
+        html += '</div></div>';
     }
 
     html += '</div>'; // Close Main Flex Container
@@ -519,21 +549,30 @@ window.closeMemoModal = function () {
 };
 
 window.addMemo = function (type) {
-    const title = (type === 'common' ? '📌 공통 메모 추가' : '📅 월별 메모 추가');
+    let title;
+    if (type === 'common') title = '📌 공통 메모 추가';
+    else if (type === 'yearly') title = '📅 연간 메모 추가';
+    else title = '📅 월별 메모 추가';
+
     openMemoModal(title, '', (text) => {
-        if (roadmapData.commonMemos && !Array.isArray(roadmapData.commonMemos) && type === 'common') {
-            if (!roadmapData.commonMemos[currentPageType]) roadmapData.commonMemos[currentPageType] = [];
-            roadmapData.commonMemos[currentPageType].push(text);
-        } else if (type === 'common') {
-            if (!roadmapData.commonMemos) roadmapData.commonMemos = [];
-            roadmapData.commonMemos.push({ id: Date.now().toString(), text: text });
+        if (type === 'common') {
+            if (roadmapData.commonMemos && !Array.isArray(roadmapData.commonMemos)) {
+                if (!roadmapData.commonMemos[currentPageType]) roadmapData.commonMemos[currentPageType] = [];
+                roadmapData.commonMemos[currentPageType].push(text);
+            } else {
+                if (!roadmapData.commonMemos) roadmapData.commonMemos = [];
+                roadmapData.commonMemos.push({ id: Date.now().toString(), text: text });
+            }
+        } else if (type === 'yearly') {
+            const yearData = roadmapData.years[currentYear];
+            if (!yearData.yearlyMemos) yearData.yearlyMemos = [];
+            yearData.yearlyMemos.push({ id: Date.now().toString(), text: text });
         } else {
             const yearData = roadmapData.years[currentYear];
             if (!yearData.monthlyMemos[currentMonth]) yearData.monthlyMemos[currentMonth] = {};
             let monthObj = yearData.monthlyMemos[currentMonth];
 
             if (Array.isArray(monthObj)) {
-                // If it's a legacy array, convert it to an object with the current type
                 const oldArr = [...monthObj];
                 monthObj = { [currentPageType]: oldArr };
                 yearData.monthlyMemos[currentMonth] = monthObj;
@@ -551,15 +590,23 @@ window.editMemo = function (type, idx) {
     let list;
     if (type === 'common') {
         list = (roadmapData.commonMemos && !Array.isArray(roadmapData.commonMemos)) ? roadmapData.commonMemos[currentPageType] : roadmapData.commonMemos;
+    } else if (type === 'yearly') {
+        list = roadmapData.years[currentYear].yearlyMemos || [];
     } else {
         const monthObj = roadmapData.years[currentYear].monthlyMemos[currentMonth];
         list = (monthObj && monthObj[currentPageType]) ? monthObj[currentPageType] : [];
     }
+
     let itemIdx = (typeof idx === 'string') ? list.findIndex(it => (typeof it === 'object' ? it.id === idx : false)) : idx;
     if (itemIdx === -1 && typeof idx === 'string' && !isNaN(parseInt(idx))) itemIdx = parseInt(idx);
     if (itemIdx === -1 || !list[itemIdx]) return;
+
     const oldText = typeof list[itemIdx] === 'object' ? list[itemIdx].text : list[itemIdx];
-    const title = (type === 'common' ? '📌 공통 메모 수정' : '📅 월별 메모 수정');
+    let title;
+    if (type === 'common') title = '📌 공통 메모 수정';
+    else if (type === 'yearly') title = '📅 연간 메모 수정';
+    else title = '📅 월별 메모 수정';
+
     openMemoModal(title, oldText, (newText) => {
         if (typeof list[itemIdx] === 'object') {
             list[itemIdx].text = newText;
@@ -576,10 +623,13 @@ window.deleteMemo = function (type, idx) {
     let list;
     if (type === 'common') {
         list = (roadmapData.commonMemos && !Array.isArray(roadmapData.commonMemos)) ? roadmapData.commonMemos[currentPageType] : roadmapData.commonMemos;
+    } else if (type === 'yearly') {
+        list = roadmapData.years[currentYear].yearlyMemos || [];
     } else {
         const monthObj = roadmapData.years[currentYear].monthlyMemos[currentMonth];
         list = (monthObj && monthObj[currentPageType]) ? monthObj[currentPageType] : [];
     }
+
     let itemIdx = (typeof idx === 'string') ? list.findIndex(it => (typeof it === 'object' ? it.id === idx : false)) : idx;
     if (itemIdx === -1 && typeof idx === 'string' && !isNaN(parseInt(idx))) itemIdx = parseInt(idx);
     if (itemIdx > -1) {
