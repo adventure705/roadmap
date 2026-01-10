@@ -470,7 +470,7 @@ function openAddItemModal(itemId = null) {
 
             let cats = (roadmapData.categories && roadmapData.categories[currentPageType]) ? roadmapData.categories[currentPageType] : [];
 
-            if (!cats || cats.length === 0) {
+            if (!Array.isArray(cats) || cats.length === 0) {
                 cats = defaults[currentPageType] || [];
             }
 
@@ -489,7 +489,7 @@ function openAddItemModal(itemId = null) {
 
             let banks = (roadmapData.bankAccounts && roadmapData.bankAccounts[currentPageType]) ? roadmapData.bankAccounts[currentPageType] : [];
 
-            if (!banks || banks.length === 0) {
+            if (!Array.isArray(banks) || banks.length === 0) {
                 banks = defaults[currentPageType] || [];
             }
 
