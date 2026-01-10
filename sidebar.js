@@ -388,11 +388,14 @@ window.renderMemos = function (containerId = 'memoContainer') {
     let html = '<div class="flex flex-col lg:flex-row gap-4 w-full">';
 
     // 1. Common Memo Block
-    const validMonthlyTabs = ['fixed', 'variable', 'other_income', 'income', 'cash', 'settlement', 'dashboard'];
+    const validMonthlyTabs = ['fixed', 'variable', 'other_income', 'income', 'cash', 'settlement', 'dashboard', 'business'];
     const isFullWidthCommon = (currentPageType === 'secret_board' || !validMonthlyTabs.includes(currentPageType));
+    const isBusiness = currentPageType === 'business';
+
+    const commonClass = isFullWidthCommon ? 'w-full' : (isBusiness ? 'flex-1 lg:flex-[2]' : 'flex-1 lg:min-w-[300px]');
 
     html += `
-    <div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 flex-1 min-w-0 ${isFullWidthCommon ? 'w-full' : 'lg:min-w-[300px]'}">
+    <div class="bg-gray-800/50 p-4 rounded-lg border border-white/5 min-w-0 ${commonClass}">
         <div class="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
             <span class="text-sm font-bold text-yellow-500 flex items-center gap-2">📌 공통 메모</span>
             <button onclick="addMemo('common')" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-md transition text-gray-300 font-medium ml-4">+ 추가</button>
