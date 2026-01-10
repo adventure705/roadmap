@@ -405,7 +405,9 @@ window.renderMemos = function (containerId = 'memoContainer') {
     const isTaxPage = currentPageType === 'tax_management';
     const containerClass = isTaxPage
         ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 h-[150px] overflow-y-auto pr-1 custom-scrollbar"
-        : "space-y-2 max-h-24 overflow-y-auto pr-1 custom-scrollbar";
+        : (isBusiness
+            ? "grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar"
+            : "space-y-2 max-h-24 overflow-y-auto pr-1 custom-scrollbar");
 
     if (commonMemos.length === 0) {
         html += '<p class="text-xs text-gray-500 italic py-2 text-center">등록된 공통 메모가 없습니다.</p>';
@@ -415,8 +417,12 @@ window.renderMemos = function (containerId = 'memoContainer') {
             const text = typeof memo === 'object' ? memo.text : memo;
             const idParam = typeof memo === 'object' ? `'${memo.id}'` : idx;
             html += `
-            <div class="group bg-gray-900/50 p-2.5 rounded border border-white/5 text-xs flex justify-between items-start gap-2 hover:bg-gray-800/50 transition h-fit">
-                <p class="text-gray-300 whitespace-pre-wrap break-all flex-1 leading-relaxed">${text}</p>
+            <div class="group bg-gray-900/50 p-2.5 rounded border border-white/5 text-xs flex justify-between items-start gap-2 hover:bg-gray-800/50 transition h-fit cursor-move"
+                 draggable="true" 
+                 ondragstart="memoDragStart(event, 'common', ${idx})" 
+                 ondragover="memoDragOver(event)" 
+                 ondrop="memoDrop(event, 'common', ${idx})">
+                <p class="text-gray-300 whitespace-pre-wrap break-all flex-1 leading-relaxed pointer-events-none">${text}</p>
                 <div class="opacity-0 group-hover:opacity-100 flex gap-1 shrink-0 transition-opacity">
                     <button onclick="editMemo('common', ${idParam})" class="text-gray-400 hover:text-white p-1">✎</button>
                     <button onclick="deleteMemo('common', ${idParam})" class="text-red-400 hover:text-red-300 p-1">×</button>
@@ -430,19 +436,19 @@ window.renderMemos = function (containerId = 'memoContainer') {
     // Add styles for grid view truncation
     html += `
     <style>
-        .lg\\:grid-cols-3 .text-gray-300 {
+        .lg\\:grid-cols-3 .text-gray-300, .lg\\:grid-cols-2 .text-gray-300 {
             max-height: 100px;
             overflow-y: auto;
             padding-right: 4px;
         }
-        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar {
+        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar, .lg\\:grid-cols-2 .text-gray-300::-webkit-scrollbar {
             width: 3px;
         }
-        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar-thumb {
+        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar-thumb, .lg\\:grid-cols-2 .text-gray-300::-webkit-scrollbar-thumb {
             background: rgba(255,255,255,0.3);
             border-radius: 2px;
         }
-        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar-track {
+        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar-track, .lg\\:grid-cols-2 .text-gray-300::-webkit-scrollbar-track {
             background: transparent;
         }
     </style>`;
@@ -458,17 +464,21 @@ window.renderMemos = function (containerId = 'memoContainer') {
                 <span class="text-sm font-bold text-green-400 flex items-center gap-2">📅 ${currentYear}년 메모</span>
                 <button onclick="addMemo('yearly')" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-md transition text-gray-300 font-medium ml-4">+ 추가</button>
             </div>
-            <div class="space-y-2 max-h-24 overflow-y-auto pr-1 custom-scrollbar">`;
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">`;
 
         if (yearlyMemos.length === 0) {
-            html += '<p class="text-xs text-gray-500 italic py-2 text-center">등록된 연간 메모가 없습니다.</p>';
+            html += '<p class="text-xs text-gray-500 italic py-2 text-center col-span-2">등록된 연간 메모가 없습니다.</p>';
         } else {
             yearlyMemos.forEach((memo, idx) => {
                 const text = typeof memo === 'object' ? memo.text : memo;
                 const idParam = typeof memo === 'object' ? `'${memo.id}'` : idx;
                 html += `
-                <div class="group bg-gray-900/50 p-2.5 rounded border border-white/5 text-xs flex justify-between items-start gap-2 hover:bg-gray-800/50 transition">
-                    <p class="text-gray-300 whitespace-pre-wrap break-all flex-1 leading-relaxed">${text}</p>
+                <div class="group bg-gray-900/50 p-2.5 rounded border border-white/5 text-xs flex justify-between items-start gap-2 hover:bg-gray-800/50 transition cursor-move"
+                     draggable="true" 
+                     ondragstart="memoDragStart(event, 'yearly', ${idx})" 
+                     ondragover="memoDragOver(event)" 
+                     ondrop="memoDrop(event, 'yearly', ${idx})">
+                    <p class="text-gray-300 whitespace-pre-wrap break-all flex-1 leading-relaxed pointer-events-none">${text}</p>
                     <div class="opacity-0 group-hover:opacity-100 flex gap-1 shrink-0 transition-opacity">
                         <button onclick="editMemo('yearly', ${idParam})" class="text-gray-400 hover:text-white p-1">✎</button>
                         <button onclick="deleteMemo('yearly', ${idParam})" class="text-red-400 hover:text-red-300 p-1">×</button>
@@ -520,6 +530,49 @@ window.renderMemos = function (containerId = 'memoContainer') {
 
     html += '</div>'; // Close Main Flex Container
     container.innerHTML = html;
+};
+
+// Drag and Drop Handlers
+window.memoDragStart = function (e, type, index) {
+    e.dataTransfer.setData("text/plain", JSON.stringify({ type, index }));
+    e.dataTransfer.effectAllowed = "move";
+};
+
+window.memoDragOver = function (e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+};
+
+window.memoDrop = function (e, targetType, targetIndex) {
+    e.preventDefault();
+    try {
+        const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+        const sourceType = data.type;
+        const sourceIndex = data.index;
+
+        if (sourceType !== targetType) return; // Only allow reordering within same type
+
+        let list;
+        if (sourceType === 'common') {
+            list = (roadmapData.commonMemos && !Array.isArray(roadmapData.commonMemos)) ? roadmapData.commonMemos[currentPageType] : roadmapData.commonMemos;
+        } else if (sourceType === 'yearly') {
+            list = roadmapData.years[currentYear].yearlyMemos;
+        } else {
+            return;
+        }
+
+        if (!list || !Array.isArray(list)) return;
+
+        // Move item
+        if (sourceIndex >= 0 && sourceIndex < list.length && targetIndex >= 0 && targetIndex < list.length && sourceIndex !== targetIndex) {
+            const [movedItem] = list.splice(sourceIndex, 1);
+            list.splice(targetIndex, 0, movedItem);
+            saveData();
+            renderMemos();
+        }
+    } catch (err) {
+        console.error("Drop failed", err);
+    }
 };
 
 window.openMemoModal = function (title, initialText, onSave) {
