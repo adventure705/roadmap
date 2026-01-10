@@ -163,10 +163,10 @@ function renderTable(blockId) {
     // Helper to determine if a column should be summed
     const isSummableCol = (colName) => {
         const raw = (colName || '').replace(/\s+/g, '');
-        if (raw === '세후이자') return false; 
+        if (raw === '세후이자') return false;
         if (raw === '현황') return false;
         if (raw.includes('율') || raw.includes('비율')) return false; // Percentage/Interest Rate
-        
+
         // Block 2: Treat almost everything numeric as summable except specific exclusions
         if (blockId === 'block2') return true;
 
@@ -435,9 +435,10 @@ function renderTable(blockId) {
                 html += `<tr style="${rowStyle}">`;
 
                 // Row Header
+                // Row Header
                 html += `<td class="p-0 border border-white/10 relative">
-                            <div class="cell-wrapper justify-center">
-                                <span class="text-sm font-bold" style="${textStyle}">↳ ${invName}</span>
+                            <div class="cell-wrapper">
+                                <textarea class="row-header-input font-bold" rows="1" readonly style="${textStyle} background: transparent; cursor: default;">↳ ${invName}</textarea>
                             </div>
                          </td>`;
 
@@ -455,8 +456,8 @@ function renderTable(blockId) {
                     }
 
                     html += `<td class="p-0 border border-white/10 relative">
-                                <div class="cell-wrapper justify-center text-sm font-bold pr-2" style="justify-content: center; ${textStyle}">
-                                    ${disp}
+                                <div class="cell-wrapper">
+                                    <textarea class="table-input font-bold" rows="1" readonly style="${textStyle} background: transparent; cursor: default; text-align: center;">${disp}</textarea>
                                 </div>
                              </td>`;
                 });
@@ -473,13 +474,10 @@ function renderTable(blockId) {
         // 1. Total (Completed) Row
         html += `<tr style="background-color: rgba(220, 38, 38, 0.15); border-top: 2px solid rgba(220, 38, 38, 0.3); ${hStyle}">`;
 
-        // Match existing Total row structure. usually first col is corner/header
-        // But here we are just appending cells. We need to match grid.cols layout.
-
         // Row Header (First Cell)
         html += `<td class="p-0 border border-white/10 relative">
                     <div class="cell-wrapper justify-center">
-                        <span class="font-bold text-red-400">합계 (완료)</span>
+                         <textarea class="row-header-input font-bold text-red-400" rows="1" readonly style="background: transparent; cursor: default; text-align: center;">합계 (완료)</textarea>
                     </div>
                  </td>`;
 
@@ -493,8 +491,8 @@ function renderTable(blockId) {
             const finalDisp = (cName === '세후이자' || isStatus) ? '-' : disp;
 
             html += `<td class="p-0 border border-white/10 relative">
-                        <div class="cell-wrapper justify-center font-bold text-red-300 pr-2" style="justify-content: center;">
-                            ${finalDisp}
+                        <div class="cell-wrapper">
+                            <textarea class="table-input font-bold text-red-300" rows="1" readonly style="background: transparent; cursor: default; text-align: center;">${finalDisp}</textarea>
                         </div>
                      </td>`;
         });
@@ -504,19 +502,14 @@ function renderTable(blockId) {
         const sortedInvComp = Object.keys(completedTotals.investors).sort();
         sortedInvComp.forEach(invName => {
             const invColor = getColorForName(invName);
-            // Use Red-tinted background mixed with investor color? Or just distinct
-            // User said: "Different color to distinguish".
-            // Let's use a darker/reddish version of the investor style.
-            // Blend investor color with red or just make it distinct.
-
             const rowStyle = `background-color: rgba(60, 20, 20, 0.4); border-top: 1px dashed ${invColor}66; ${hStyle}`;
             const textStyle = `color: ${invColor}; font-weight: bold; filter: brightness(0.9);`;
 
             html += `<tr style="${rowStyle}">`;
 
             html += `<td class="p-0 border border-white/10 relative">
-                        <div class="cell-wrapper justify-center">
-                            <span class="text-sm font-bold" style="${textStyle}">↳ ${invName} (완료)</span>
+                        <div class="cell-wrapper">
+                            <textarea class="row-header-input font-bold" rows="1" readonly style="${textStyle} background: transparent; cursor: default;">↳ ${invName} (완료)</textarea>
                         </div>
                       </td>`;
 
@@ -528,8 +521,8 @@ function renderTable(blockId) {
                 const finalDisp = (cName === '세후이자' || isStatus) ? '-' : disp;
 
                 html += `<td class="p-0 border border-white/10 relative">
-                            <div class="cell-wrapper justify-center text-sm font-bold pr-2" style="justify-content: center; ${textStyle}">
-                                ${finalDisp}
+                            <div class="cell-wrapper">
+                                <textarea class="table-input font-bold" rows="1" readonly style="${textStyle} background: transparent; cursor: default; text-align: center;">${finalDisp}</textarea>
                             </div>
                          </td>`;
             });

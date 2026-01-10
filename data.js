@@ -577,11 +577,28 @@ function processParsedData(parsed) {
                 };
             } else {
                 roadmapData.categories = parsed.categories;
-                if (!roadmapData.categories.settlement) {
-                    roadmapData.categories.settlement = ['식자재', '배달', '외식', '대중교통', '택시', '물품구입비', '자기계발비', '꾸밈비', '의료건강비', '사회생활비', '문화생활비', '경조사', '예비비'];
-                }
-                if (!roadmapData.categories.other_income) roadmapData.categories.other_income = ['기타 수입'];
             }
+        }
+
+        // Category Integrity Checks (Always run)
+        {
+            const defaults = {
+                settlement: ['식자재', '배달', '외식', '대중교통', '택시', '물품구입비', '자기계발비', '꾸밈비', '의료건강비', '사회생활비', '문화생활비', '경조사', '예비비'],
+                other_income: ['기타 수입'],
+                income: ['월급', '부수입'],
+                fixed: ['구독', '고정비용', '대출이자'],
+                variable: ['식비', '교통비', '쇼핑'],
+                cash: ['용돈'],
+                installment: ['가전', '가구']
+            };
+            if (!roadmapData.categories) roadmapData.categories = {};
+            if (!roadmapData.categories.settlement || roadmapData.categories.settlement.length === 0) roadmapData.categories.settlement = defaults.settlement;
+            if (!roadmapData.categories.other_income || roadmapData.categories.other_income.length === 0) roadmapData.categories.other_income = defaults.other_income;
+            if (!roadmapData.categories.income || roadmapData.categories.income.length === 0) roadmapData.categories.income = defaults.income;
+            if (!roadmapData.categories.fixed || roadmapData.categories.fixed.length === 0) roadmapData.categories.fixed = defaults.fixed;
+            if (!roadmapData.categories.variable || roadmapData.categories.variable.length === 0) roadmapData.categories.variable = defaults.variable;
+            if (!roadmapData.categories.cash || roadmapData.categories.cash.length === 0) roadmapData.categories.cash = defaults.cash;
+            if (!roadmapData.categories.installment || roadmapData.categories.installment.length === 0) roadmapData.categories.installment = defaults.installment;
         }
 
         // Migrate Bank Accounts
@@ -593,9 +610,26 @@ function processParsedData(parsed) {
                 };
             } else {
                 roadmapData.bankAccounts = parsed.bankAccounts;
-                if (!roadmapData.bankAccounts.settlement) roadmapData.bankAccounts.settlement = [];
-                if (!roadmapData.bankAccounts.other_income) roadmapData.bankAccounts.other_income = [];
             }
+        }
+
+        // Bank Accounts Integrity Checks (Always run)
+        {
+            const defaults = {
+                other_income: ['국민은행'],
+                income: ['국민은행'],
+                fixed: ['국민은행', '신한은행'],
+                variable: ['국민은행', '카카오뱅크'],
+                installment: ['현대카드', '삼성카드']
+            };
+            if (!roadmapData.bankAccounts) roadmapData.bankAccounts = {};
+            if (!roadmapData.bankAccounts.settlement) roadmapData.bankAccounts.settlement = [];
+            if (!roadmapData.bankAccounts.other_income || roadmapData.bankAccounts.other_income.length === 0) roadmapData.bankAccounts.other_income = defaults.other_income;
+            if (!roadmapData.bankAccounts.income || roadmapData.bankAccounts.income.length === 0) roadmapData.bankAccounts.income = defaults.income;
+            if (!roadmapData.bankAccounts.fixed || roadmapData.bankAccounts.fixed.length === 0) roadmapData.bankAccounts.fixed = defaults.fixed;
+            if (!roadmapData.bankAccounts.variable || roadmapData.bankAccounts.variable.length === 0) roadmapData.bankAccounts.variable = defaults.variable;
+            if (!roadmapData.bankAccounts.cash) roadmapData.bankAccounts.cash = [];
+            if (!roadmapData.bankAccounts.installment || roadmapData.bankAccounts.installment.length === 0) roadmapData.bankAccounts.installment = defaults.installment;
         }
 
         // Migrate Cards
@@ -608,10 +642,26 @@ function processParsedData(parsed) {
                 };
             } else {
                 roadmapData.cards = parsed.cards;
-                if (!roadmapData.cards.settlement) roadmapData.cards.settlement = [];
-                if (!roadmapData.cards.business) roadmapData.cards.business = [];
-                if (!roadmapData.cards.other_income) roadmapData.cards.other_income = [];
             }
+        }
+
+        // Cards Integrity Checks (Always run)
+        {
+            const defaults = {
+                settlement: ['현대카드', '삼성카드'],
+                fixed: ['현대카드', '삼성카드'],
+                variable: ['현대카드', '삼성카드'],
+                installment: ['현대카드', '삼성카드']
+            };
+            if (!roadmapData.cards) roadmapData.cards = {};
+            if (!roadmapData.cards.settlement || roadmapData.cards.settlement.length === 0) roadmapData.cards.settlement = defaults.settlement;
+            if (!roadmapData.cards.business) roadmapData.cards.business = [];
+            if (!roadmapData.cards.other_income) roadmapData.cards.other_income = [];
+            if (!roadmapData.cards.income) roadmapData.cards.income = [];
+            if (!roadmapData.cards.cash) roadmapData.cards.cash = [];
+            if (!roadmapData.cards.fixed || roadmapData.cards.fixed.length === 0) roadmapData.cards.fixed = defaults.fixed;
+            if (!roadmapData.cards.variable || roadmapData.cards.variable.length === 0) roadmapData.cards.variable = defaults.variable;
+            if (!roadmapData.cards.installment || roadmapData.cards.installment.length === 0) roadmapData.cards.installment = defaults.installment;
         }
 
         if (parsed.commonMemos) roadmapData.commonMemos = parsed.commonMemos;

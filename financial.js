@@ -455,18 +455,60 @@ function openAddItemModal(itemId = null) {
         }
 
         // Re-populate Dropdowns (Always refreshing is safer to ensure sync)
+        // Re-populate Dropdowns
         const catSelect = document.getElementById('addItemCategory');
         if (catSelect) {
-            const cats = roadmapData.categories[currentPageType] || [];
+            const defaults = {
+                income: ['월급', '부수입'],
+                fixed: ['구독', '고정비용', '대출이자'],
+                variable: ['식비', '교통비', '쇼핑'],
+                cash: ['용돈'],
+                installment: ['가전', '가구'],
+                other_income: ['기타 수입'],
+                settlement: ['식자재', '배달', '외식', '대중교통', '택시', '물품구입비', '자기계발비', '꾸밈비', '의료건강비', '사회생활비', '문화생활비', '경조사', '예비비']
+            };
+
+            let cats = (roadmapData.categories && roadmapData.categories[currentPageType]) ? roadmapData.categories[currentPageType] : [];
+
+            if (!cats || cats.length === 0) {
+                cats = defaults[currentPageType] || [];
+            }
+
             catSelect.innerHTML = `<option value="">선택(없음)</option>` + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+            if (!itemId) catSelect.value = "";
         }
+
         if (bankSelect) {
-            const banks = roadmapData.bankAccounts[currentPageType] || [];
+            const defaults = {
+                income: ['국민은행'],
+                fixed: ['국민은행', '신한은행'],
+                variable: ['국민은행', '카카오뱅크'],
+                other_income: ['국민은행'],
+                installment: ['현대카드', '삼성카드']
+            };
+
+            let banks = (roadmapData.bankAccounts && roadmapData.bankAccounts[currentPageType]) ? roadmapData.bankAccounts[currentPageType] : [];
+
+            if (!banks || banks.length === 0) {
+                banks = defaults[currentPageType] || [];
+            }
+
             bankSelect.innerHTML = `<option value="">선택(없음)</option>` + banks.map(b => `<option value="${b}">${b}</option>`).join('');
+            if (!itemId) bankSelect.value = "";
         }
-        if (cardSelect && (currentPageType !== 'income' && currentPageType !== 'other_income')) {
-            const cards = roadmapData.cards[currentPageType] || [];
-            cardSelect.innerHTML = `<option value="">선택(없음)</option>` + cards.map(c => `<option value="${c}">${c}</option>`).join('');
+
+        const cardEl = document.getElementById('addItemCard');
+        if (cardEl && (currentPageType !== 'income' && currentPageType !== 'other_income')) {
+            let cards = roadmapData.cards[currentPageType] || [];
+
+            // Fallback Defaults
+            if (cards.length === 0) {
+                if (currentPageType === 'fixed' || currentPageType === 'variable' || currentPageType === 'installment' || currentPageType === 'settlement') {
+                    cards = ['현대카드', '삼성카드'];
+                }
+            }
+
+            cardEl.innerHTML = `<option value="">선택(없음)</option>` + cards.map(c => `<option value="${c}">${c}</option>`).join('');
         }
 
         if (itemId) {
