@@ -8,7 +8,15 @@ let sortState = {
 };
 
 const formatMoneyFull = (amount) => {
-    return new Intl.NumberFormat('ko-KR').format(amount);
+    if (amount === undefined || amount === null || amount === '') return '';
+    const num = typeof amount === 'string' ? parseFloat(amount.replace(/,/g, '')) : amount;
+    if (isNaN(num)) return amount;
+
+    if (Number.isInteger(num)) {
+        return new Intl.NumberFormat('ko-KR').format(num);
+    } else {
+        return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+    }
 };
 
 function initFinancialPage(type, mode = 'yearly') {
@@ -1227,7 +1235,7 @@ function renderYearlyTable() {
                         // Allow digits, operators, parens, decimal, spaces only
                         if (/^[\d+\-*/().\s]+$/.test(formula)) {
                             const result = new Function('return ' + formula)();
-                            item.values[i] = Math.round(result || 0);
+                            item.values[i] = result || 0;
                             variableMap[cleanName] = item.values[i]; // Store result for chaining
                             if (i === 0) console.log(`DEBUG: Result for '${itemName}':`, item.values[i]);
                         } else {
@@ -1263,7 +1271,7 @@ function renderYearlyTable() {
             // Let's just return 0 or sum of atomic items.
             // Returning 0 effectively hides the bottom total if we want user to rely on 'Calc' rows.
             // But let's return the final residual block sum just in case.
-            return Math.round(currentBlockSum);
+            return currentBlockSum;
         });
     }
 
