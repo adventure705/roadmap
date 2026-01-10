@@ -5,6 +5,13 @@ const formatMoneyFull = (amount) => {
     return new Intl.NumberFormat('ko-KR').format(Math.round(num));
 };
 
+const formatUSD = (amount) => {
+    if (amount === undefined || amount === null || amount === '') return '';
+    const num = typeof amount === 'string' ? parseFloat(amount.replace(/,/g, '')) : amount;
+    if (isNaN(num)) return amount;
+    return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+};
+
 function initInvestmentPage() {
     loadData();
     // Default initial data if not exists (redundant with data.js but for safety)
@@ -293,10 +300,11 @@ function renderTable(blockId) {
 
             // Formatting check
             const colNameRaw = (grid.cols[cIdx] || '').replace(/\s+/g, '');
+            const isUSD = (grid.cols[cIdx] || '').toUpperCase().includes('USD') || (grid.cols[cIdx] || '').includes('달러');
             if (isSummableCol(colNameRaw) && !isSumRow && val) {
                 const numVal = parseFloat(String(val).replace(/,/g, ''));
                 if (!isNaN(numVal)) {
-                    val = formatMoneyFull(numVal);
+                    val = isUSD ? formatUSD(numVal) : formatMoneyFull(numVal);
                 }
             }
 
@@ -391,7 +399,8 @@ function renderTable(blockId) {
                     hasValidNum = false;
                 }
 
-                val = hasValidNum ? formatMoneyFull(sum) : "-";
+                const isUSD = (grid.cols[cIdx] || '').toUpperCase().includes('USD') || (grid.cols[cIdx] || '').includes('달러');
+                val = hasValidNum ? (isUSD ? formatUSD(sum) : formatMoneyFull(sum)) : "-";
             }
 
             if (statusIdx === cIdx && !isSumRow) {
@@ -452,7 +461,8 @@ function renderTable(blockId) {
                     } else if (cName === '세후이자' || isStatus) {
                         disp = '-';
                     } else if (investorTotals[invName] && investorTotals[invName][cIdx] !== undefined) {
-                        disp = formatMoneyFull(investorTotals[invName][cIdx]);
+                        const isUSD = (grid.cols[cIdx] || '').toUpperCase().includes('USD') || (grid.cols[cIdx] || '').includes('달러');
+                        disp = isUSD ? formatUSD(investorTotals[invName][cIdx]) : formatMoneyFull(investorTotals[invName][cIdx]);
                     }
 
                     html += `<td class="p-0 border border-white/10 relative">
@@ -483,7 +493,8 @@ function renderTable(blockId) {
 
         grid.cols.forEach((_, cIdx) => {
             const val = completedTotals.total[cIdx];
-            const disp = (val !== undefined) ? formatMoneyFull(val) : '-';
+            const isUSD = (grid.cols[cIdx] || '').toUpperCase().includes('USD') || (grid.cols[cIdx] || '').includes('달러');
+            const disp = (val !== undefined) ? (isUSD ? formatUSD(val) : formatMoneyFull(val)) : '-';
 
             // Check for '세후이자' column or Status column
             const cName = (grid.cols[cIdx] || '').replace(/\s+/g, '');
@@ -515,7 +526,8 @@ function renderTable(blockId) {
 
             grid.cols.forEach((_, cIdx) => {
                 const val = completedTotals.investors[invName][cIdx];
-                const disp = (val !== undefined) ? formatMoneyFull(val) : '-';
+                const isUSD = (grid.cols[cIdx] || '').toUpperCase().includes('USD') || (grid.cols[cIdx] || '').includes('달러');
+                const disp = (val !== undefined) ? (isUSD ? formatUSD(val) : formatMoneyFull(val)) : '-';
                 const cName = (grid.cols[cIdx] || '').replace(/\s+/g, '');
                 const isStatus = (grid.cols[cIdx] || '').trim() === '현황';
                 const finalDisp = (cName === '세후이자' || isStatus) ? '-' : disp;
