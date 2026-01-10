@@ -17,8 +17,16 @@ const defaultMenuConfig = [
     { type: 'item', id: 'moneyPlan', label: '머니 플랜', icon: '💰', link: 'money_plan.html' },
     { type: 'item', id: 'secret_board', label: '시크릿 보드', icon: '🚩', link: 'secret_board.html' },
     { type: 'header', label: '정보 관리' },
-    { type: 'item', id: 'management', label: '정보 관리', icon: '📋', link: 'management.html' }
+    { type: 'item', id: 'management', label: '정보 관리', icon: '📋', link: 'management.html' },
+    { type: 'item', id: 'memo', label: '메모 관리', icon: '📝', link: 'memo.html' },
+    { type: 'item', id: 'backup', label: '데이터 백업/복구', icon: '🛡️', link: '#', onclick: 'openBackupCenter()' }
 ];
+
+// Force reset sidebar config to apply new menu items
+if (!localStorage.getItem('sidebar_v4_swap_reset')) {
+    localStorage.removeItem('sidebar_config');
+    localStorage.setItem('sidebar_v4_swap_reset', 'true');
+}
 
 function getMenuConfig() {
     try {
@@ -229,7 +237,9 @@ function renderSidebar(activePage) {
             menuHTML += `<div class="pt-4 pb-1 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">${item.label}</div>`;
         } else {
             const isActive = activePage === item.id;
-            menuHTML += `<a href="${item.link}" class="sidebar-link ${isActive ? 'active' : ''} w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-sm font-medium text-gray-400 focus:outline-none">
+            const href = item.onclick ? 'javascript:void(0)' : (item.link || '#');
+            const onclickAttr = item.onclick ? `onclick="${item.onclick}"` : '';
+            menuHTML += `<a href="${href}" ${onclickAttr} class="sidebar-link ${isActive ? 'active' : ''} w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-sm font-medium text-gray-400 focus:outline-none">
                 <span class="w-5 text-center">${item.icon}</span> ${item.label}
             </a>`;
         }

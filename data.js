@@ -113,6 +113,7 @@ let roadmapData = {
         'tax_management': '세금 관리'
     },
     sidebarConfig: null, // 초기에는 null로 두어 클라우드 데이터 대기
+    memoPage: { common: [], yearly: {}, subtitle: "공통 메모와 연도별 메모를 자유롭게 관리하세요." },
     updatedAt: 0
 };
 
@@ -244,20 +245,99 @@ function loadData() {
 // adapted slightly to be cleaner.
 // Actually, the original logic is long. I'll paste it fully.
 
-function saveData() {
+const MAX_HISTORY_ITEMS = 20;
+
+function saveData(forceHistory = false) {
     try {
+        // 0. Integrity Check
+        if (!roadmapData.memoPage || !Array.isArray(roadmapData.memoPage.common)) {
+            console.error("CRITICAL: Data integrity check failed during save. Aborting to protect data.");
+            return;
+        }
+
         isDirty = true;
         roadmapData.updatedAt = Date.now();
+        const dataStr = JSON.stringify(roadmapData);
 
         // 1. Local Save First (Instant persistence)
-        localStorage.setItem('supermoon_data', JSON.stringify(roadmapData));
+        localStorage.setItem('supermoon_data', dataStr);
+        localStorage.setItem('supermoon_data_backup_last', dataStr); // Immediate Backup
 
-        // 2. Cloud Sync
+        // 2. History Management (Time Machine)
+        try {
+            const now = Date.now();
+            let history = JSON.parse(localStorage.getItem('supermoon_history') || '[]');
+
+            // Save snapshot if last save was > 5 minutes ago OR history is empty OR Forced (Ctrl+S)
+            const lastSave = history.length > 0 ? history[history.length - 1].timestamp : 0;
+            if (forceHistory || now - lastSave > 5 * 60 * 1000) {
+                history.push({ timestamp: now, data: dataStr, summary: forceHistory ? "수동 저장 (Ctrl+S)" : new Date(now).toLocaleTimeString() });
+                if (history.length > MAX_HISTORY_ITEMS) history.shift(); // Remove oldest
+                localStorage.setItem('supermoon_history', JSON.stringify(history));
+                console.log("🕒 History snapshot saved.");
+            }
+        } catch (e) { console.error("History save failed", e); }
+
+        // 3. Cloud Sync
         syncMemoryToCloud();
     } catch (e) {
         console.error("Save Error:", e);
     }
 }
+
+// Global Ctrl+S Handler
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        saveData(true); // Force history snapshot
+
+        // Visual Feedback
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-xl z-[9999] animate-in slide-in-from-bottom duration-300';
+        toast.innerText = '✅ 저장 및 타임머신 기록 완료';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+});
+
+// Data Export
+window.exportDataToFile = function () {
+    const dataStr = JSON.stringify(roadmapData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    a.href = url;
+    a.download = `supermoon_backup_${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert("데이터 백업 파일이 다운로드 되었습니다.\nPC에 안전하게 보관하세요.");
+};
+
+// Data Import
+window.importDataFromFile = function (inputElement) {
+    const file = inputElement.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            if (confirm("이 파일로 데이터를 복원하시겠습니까?\n현재 데이터가 덮어씌워집니다.")) {
+                // Restore logic
+                processParsedData(importedData);
+                saveData(); // Save immediately
+                alert("복원이 완료되었습니다.");
+                location.reload();
+            }
+        } catch (err) {
+            alert("파일을 읽는 중 오류가 발생했습니다: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+};
 
 let isSyncing = false;
 function syncMemoryToCloud() {
@@ -292,6 +372,7 @@ function syncMemoryToCloud() {
         tax_management: roadmapData.tax_management || {},
         management: roadmapData.management || {},
         moneyPlan: roadmapData.moneyPlan || {},
+        memoPage: roadmapData.memoPage || { common: [], yearly: {}, subtitle: "공통 메모와 연도별 메모를 자유롭게 관리하세요." },
         updatedAt: roadmapData.updatedAt || 0,
         pageTitles: roadmapData.pageTitles || {}
     };
@@ -312,6 +393,90 @@ function syncMemoryToCloud() {
         });
 }
 
+// History UI
+window.openBackupCenter = function () {
+    // Check if modal exists
+    let modal = document.getElementById('backupCenterModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'backupCenterModal';
+        modal.className = 'fixed inset-0 bg-black/80 hidden items-center justify-center z-[200] backdrop-blur-sm';
+        modal.innerHTML = `
+            <div class="bg-gray-900 border border-white/10 p-6 rounded-2xl w-[90%] max-w-lg shadow-2xl relative">
+                <button onclick="document.getElementById('backupCenterModal').style.display='none'" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+                <h2 class="text-xl font-bold mb-6 text-white flex items-center gap-2">🛡️ 데이터 백업 센터</h2>
+                
+                <div class="space-y-6">
+                    <!-- File Backup -->
+                    <div class="bg-gray-800/50 p-4 rounded-xl border border-white/5">
+                        <h3 class="font-bold text-gray-300 mb-2">💾 파일 백업</h3>
+                        <p class="text-xs text-gray-500 mb-4">현재 데이터를 내 컴퓨터에 파일로 저장합니다.</p>
+                        <div class="flex gap-2">
+                            <button onclick="exportDataToFile()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-sm font-bold transition">
+                                파일로 저장하기 (다운로드)
+                            </button>
+                            <label class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm font-bold transition cursor-pointer text-center">
+                                파일 불러오기
+                                <input type="file" onchange="importDataFromFile(this)" class="hidden" accept=".json">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Time Machine -->
+                    <div class="bg-gray-800/50 p-4 rounded-xl border border-white/5">
+                        <h3 class="font-bold text-yellow-500 mb-2">⏰ 타임머신 (자동 저장 기록)</h3>
+                        <p class="text-xs text-gray-500 mb-4">최근 자동 저장된 시점으로 데이터를 되돌립니다.</p>
+                        <ul id="historyList" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                            <li class="text-center text-gray-500 text-sm py-2">저장된 기록이 없습니다.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    // Render History List
+    const listEl = document.getElementById('historyList');
+    const history = JSON.parse(localStorage.getItem('supermoon_history') || '[]');
+
+    if (history.length === 0) {
+        listEl.innerHTML = '<li class="text-center text-gray-500 text-sm py-2">저장된 기록이 없습니다.</li>';
+    } else {
+        listEl.innerHTML = history.slice().reverse().map((item, idx) => `
+            <li class="flex justify-between items-center bg-gray-900/50 p-3 rounded border border-white/5 hover:bg-gray-800 transition">
+                <div class="flex flex-col">
+                    <span class="text-sm text-gray-300 font-bold">${item.summary || new Date(item.timestamp).toLocaleTimeString()}</span>
+                    <span class="text-xs text-gray-500">${new Date(item.timestamp).toLocaleDateString()}</span>
+                </div>
+                <button onclick="restoreHistoryItem(${item.timestamp})" class="text-xs bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white px-3 py-1 rounded transition">
+                    되돌리기
+                </button>
+            </li>
+        `).join('');
+    }
+
+    modal.style.display = 'flex';
+};
+
+window.restoreHistoryItem = function (timestamp) {
+    if (!confirm("정말로 이 시점으로 되돌리시겠습니까?\n현재 데이터는 덮어씌워집니다.")) return;
+
+    const history = JSON.parse(localStorage.getItem('supermoon_history') || '[]');
+    const target = history.find(h => h.timestamp === timestamp);
+
+    if (target) {
+        try {
+            const parsed = JSON.parse(target.data);
+            processParsedData(parsed);
+            saveData();
+            alert("복구되었습니다.");
+            location.reload();
+        } catch (e) {
+            alert("복구 실패: " + e.message);
+        }
+    }
+};
 // Global UI Update Trigger Helper
 function triggerUIUpdate() {
     if (typeof renderAllBlocks === 'function') renderAllBlocks();
@@ -339,6 +504,7 @@ function mergeCloudData(cloudData) {
     if (cloudData.dashboardSubtitle) roadmapData.dashboardSubtitle = cloudData.dashboardSubtitle;
     if (cloudData.pageTitles) roadmapData.pageTitles = cloudData.pageTitles;
     if (cloudData.sidebarConfig) roadmapData.sidebarConfig = cloudData.sidebarConfig;
+    if (cloudData.memoPage) roadmapData.memoPage = cloudData.memoPage;
     roadmapData.updatedAt = cloudData.updatedAt || 0;
 
     // Ensure no properties are undefined
@@ -527,6 +693,11 @@ function processParsedData(parsed) {
             if (!roadmapData.management.block1.rowHeights) roadmapData.management.block1.rowHeights = [];
             if (!roadmapData.management.block1.colWidths) roadmapData.management.block1.colWidths = [];
         }
+
+        // Migrate Memo Page Data
+        if (parsed.memoPage) {
+            roadmapData.memoPage = parsed.memoPage;
+        }
     } else {
         // Old format: parsed IS the years object
         yearsData = parsed;
@@ -670,7 +841,8 @@ function renderPageTitle(pageKey) {
         'roadmap': '단기 로드맵',
         'settlement': '지출 예정산',
         'investment': '투자 수입 관리',
-        'management': '정보 관리'
+        'management': '정보 관리',
+        'memo': '메모 관리'
     };
 
     const savedTitle = (roadmapData.pageTitles && roadmapData.pageTitles[pageKey])
@@ -720,3 +892,266 @@ function togglePageTitleEdit(pageKey) {
     titleEl.replaceWith(input);
     input.focus();
 }
+
+// Emergency Recovery Tools
+window.diagnoseData = function () {
+    const local = localStorage.getItem('supermoon_data');
+    const backup = localStorage.getItem('supermoon_data_backup_last');
+
+    let msg = "진단 결과:\n";
+
+    // Memory
+    msg += `현재 메모리: Common(${roadmapData.memoPage?.common?.length || 0}), Yearly(${Object.keys(roadmapData.memoPage?.yearly || {}).length})\n`;
+
+    // LocalStorage
+    if (local) {
+        try {
+            const p = JSON.parse(local);
+            msg += `로컬 저장소: Common(${p.memoPage?.common?.length || 0}), Yearly(${Object.keys(p.memoPage?.yearly || {}).length})\n`;
+        } catch (e) { msg += "로컬 저장소: 파싱 에러\n"; }
+    } else {
+        msg += "로컬 저장소: 없음\n";
+    }
+
+    // Backup
+    if (backup) {
+        try {
+            const b = JSON.parse(backup);
+            msg += `백업 저장소: Common(${b.memoPage?.common?.length || 0}), Yearly(${Object.keys(b.memoPage?.yearly || {}).length})\n`;
+        } catch (e) { msg += "백업 저장소: 파싱 에러\n"; }
+    } else {
+        msg += "백업 저장소: 없음\n";
+    }
+
+    alert(msg);
+};
+
+window.tryRestoreBackup = function () {
+    const backup = localStorage.getItem('supermoon_data_backup_last');
+    if (!backup) {
+        alert("복구할 백업 데이터가 없습니다.");
+        return;
+    }
+
+    if (confirm("백업 데이터로 복원하시겠습니까? 현재 데이터는 덮어씌워집니다.")) {
+        try {
+            const parsed = JSON.parse(backup);
+            // Manually merge crucial data
+            if (parsed.memoPage) roadmapData.memoPage = parsed.memoPage;
+            // Add other critical restorations if needed
+
+            saveData(); // Save normalized data
+            alert("복원 완료. 페이지를 새로고침합니다.");
+            location.reload();
+        } catch (e) {
+            alert("복원 중 오류: " + e.message);
+        }
+    }
+};
+
+window.forcePullFromCloud = function () {
+    if (typeof firebase === 'undefined') {
+        alert("클라우드 연결이 되어있지 않습니다.");
+        return;
+    }
+
+    if (confirm("클라우드 데이터를 강제로 내려받으시겠습니까? 로컬 데이터가 덮어씌워집니다.")) {
+        const db = firebase.firestore();
+        db.collection('roadmap').doc(FIXED_DOC_ID).get().then(doc => {
+            if (doc.exists) {
+                const cloudData = doc.data();
+                console.log("⬇️ Forced Pull from Cloud...");
+                // Verify cloud data integrity before merging
+                if (cloudData.memoPage && (cloudData.memoPage.common.length > 0 || Object.keys(cloudData.memoPage.yearly).length > 0)) {
+                    console.log(`Cloud has data: Common(${cloudData.memoPage.common.length}), Yearly(${Object.keys(cloudData.memoPage.yearly).length})`);
+                } else {
+                    console.warn("Cloud appears to look empty too?");
+                }
+
+                mergeCloudData(cloudData);
+                saveData(); // Persist immediately
+                alert("클라우드 데이터 동기화 완료. 페이지가 새로고침됩니다.");
+                location.reload();
+            } else {
+                alert("클라우드에 데이터가 없습니다.");
+            }
+        }).catch(err => alert("클라우드 오류: " + err.message));
+    }
+};
+
+window.inspectCloudData = function () {
+    if (typeof firebase === 'undefined') { alert("연결 안됨"); return; }
+    firebase.firestore().collection('roadmap').doc(FIXED_DOC_ID).get().then(doc => {
+        if (doc.exists) {
+            const d = doc.data();
+            console.log("=== Cloud Data Inspection ===");
+            console.log("Updated At:", new Date(d.updatedAt).toLocaleString());
+            console.log("Memos (Common):", d.memoPage?.common?.length || 0);
+            console.log("Memos (Yearly):", Object.keys(d.memoPage?.yearly || {}).length);
+            alert(`클라우드 데이터 확인:\n수정일: ${new Date(d.updatedAt).toLocaleString()}\n공통메모: ${d.memoPage?.common?.length}개\n연도별메모: ${Object.keys(d.memoPage?.yearly || {}).length}개\n\n복구하려면 forcePullFromCloud() 를 실행하세요.`);
+        } else {
+            alert("문서 없음");
+        }
+    });
+};
+
+window.deepScanRecovery = function (keyword) {
+    const local = localStorage.getItem('supermoon_data');
+    const backup = localStorage.getItem('supermoon_data_backup_last');
+
+    console.log("=== Deep Scan Report ===");
+    if (local && local.includes(keyword)) console.log("Found keyword in LocalStorage!");
+    else console.log("Keyword NOT found in LocalStorage.");
+
+    if (backup && backup.includes(keyword)) console.log("Found keyword in Backup!");
+    else console.log("Keyword NOT found in Backup.");
+
+    // Dump raw sizes
+    console.log("Local Size:", local ? local.length : 0);
+    console.log("Backup Size:", backup ? backup.length : 0);
+
+    // Try to extract memo-like structures regex
+    const regex = /"title":"([^"]+)","content":"([^"]*)"/g;
+    let match;
+    console.log("--- Extracted Local Memos ---");
+    if (local) {
+        while ((match = regex.exec(local)) !== null) {
+            console.log(`Found: [${match[1]}] ${match[2].substring(0, 20)}...`);
+        }
+    }
+
+    console.log("--- Extracted Backup Memos ---");
+    if (backup) {
+        while ((match = regex.exec(backup)) !== null) {
+            console.log(`Found: [${match[1]}] ${match[2].substring(0, 20)}...`);
+        }
+    }
+
+    alert("개발자 도구(F12)의 콘솔(Console) 탭에서 스캔 결과를 확인하세요.\\n찾는 키워드가 백업에 있다면, forceRestoreFromBackup()을 실행하세요.");
+};
+
+// Advanced Diagnostics for Data Recovery
+window.advancedDiagnostics = function () {
+    console.log("=== Storage Analysis ===");
+    let msg = "저장소 상태 분석:\n";
+    let foundKeys = [];
+
+    // 1. LocalStorage Scan
+    if (typeof localStorage !== 'undefined') {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const size = localStorage.getItem(key).length;
+            console.log(`Key: [${key}], Size: ${size} bytes`);
+            foundKeys.push(`${key} (${(size / 1024).toFixed(1)}KB)`);
+        }
+    }
+    msg += "발견된 키:\n" + foundKeys.join("\n") + "\n\n";
+
+    // 2. Data Structure Deep Dive
+    console.log("=== InMemory Data Structure ===");
+    msg += "현재 로드된 데이터 구조:\n";
+
+    // Check Years present
+    const years = roadmapData.years ? Object.keys(roadmapData.years) : [];
+    msg += `연도 데이터: [${years.join(', ')}]\n`;
+
+    years.forEach(y => {
+        const d = roadmapData.years[y];
+        const memoCounts = d.monthlyMemos ? d.monthlyMemos.map(m => Object.keys(m).length).join(',') : "없음";
+        console.log(`Year ${y}: Details keys: ${Object.keys(d.details || {}).join(',')}`);
+        // Check for specific lost data types
+        const instCount = d.details?.installment?.length || 0;
+        const taxCount = (roadmapData.tax_management?.block1?.data ? Object.keys(roadmapData.tax_management.block1.data).length : 0);
+        // Note: tax_management might be global or in details depending on migration
+
+        msg += `${y}년: 할부(${instCount}개), 월별메모슬롯(${memoCounts})\n`;
+    });
+
+    // Check Global Tax/Investment
+    const invCount = roadmapData.investment?.investors?.length || 0;
+    msg += `투자 관리자: ${invCount}명\n`;
+
+    const taxKeys = roadmapData.tax_management ? Object.keys(roadmapData.tax_management) : [];
+    msg += `세금 관리 키: ${taxKeys.join(', ')}\n`;
+
+    alert(msg);
+    console.log("Check the console for detailed object structure.");
+};
+
+// Rescue Data Tool (2024 -> 2026)
+window.rescue2024Data = function () {
+    const wrongYear = 2024;
+    const targetYear = currentYear || 2026;
+
+    if (!roadmapData.years[wrongYear]) {
+        alert(`${wrongYear}년 데이터가 없습니다. (이미 이동했거나 없음)`);
+        return;
+    }
+
+    // Create target year if missing
+    if (!roadmapData.years[targetYear]) roadmapData.years[targetYear] = roadmapData.createYearData();
+
+    const source = roadmapData.years[wrongYear];
+    const target = roadmapData.years[targetYear];
+    let moveCount = 0;
+
+    // 1. Merge Installments
+    if (source.details && source.details.installment && source.details.installment.length > 0) {
+        if (!target.details.installment) target.details.installment = [];
+        target.details.installment.push(...source.details.installment);
+        console.log(`Moved ${source.details.installment.length} installments.`);
+        moveCount += source.details.installment.length;
+    }
+
+    // 2. Merge Monthly Memos (Tax, Investment, etc)
+    if (source.monthlyMemos) {
+        source.monthlyMemos.forEach((m, i) => {
+            Object.keys(m).forEach(cat => {
+                if (Array.isArray(m[cat]) && m[cat].length > 0) {
+                    if (!target.monthlyMemos[i][cat]) target.monthlyMemos[i][cat] = [];
+                    target.monthlyMemos[i][cat].push(...m[cat]);
+                    console.log(`Moved ${cat} memos for month ${i + 1}`);
+                    moveCount++;
+                }
+            });
+        });
+    }
+
+    // 3. Global Tax Management Check
+    // Sometimes tax data is in global 'tax_management' or yearly. 
+    // If user mentioned tax tab, we should ensure global tax struct is intact.
+    // If previously it was in 2024 details? Tax is usually global or monthly.
+
+    if (moveCount > 0) {
+        saveData();
+        alert(`총 ${moveCount}건의 데이터를 2024년에서 ${targetYear}년으로 성공적으로 복구했습니다!\n페이지를 새로고침합니다.`);
+        location.reload();
+    } else {
+        alert("2024년에 데이터가 있지만, 옮길 내용(할부/메모)을 찾지 못했습니다. 이미 옮겨졌을 수 있습니다.");
+    }
+};
+
+// Check for data loss on load
+setTimeout(() => {
+    if (typeof localStorage !== 'undefined') {
+        const hasMemoryData = roadmapData.memoPage && (roadmapData.memoPage.common.length > 0 || Object.keys(roadmapData.memoPage.yearly).length > 0);
+        if (!hasMemoryData) {
+            // Check backup
+            const backupStr = localStorage.getItem('supermoon_data_backup_last');
+            if (backupStr) {
+                const backup = JSON.parse(backupStr);
+                const hasBackupData = backup.memoPage && (backup.memoPage.common.length > 0 || Object.keys(backup.memoPage.yearly).length > 0);
+
+                if (hasBackupData) {
+                    console.warn("⚠️ Data integrity issue: Found empty memory but data in backup.");
+                    // Optional: Auto restore or just prompt
+                    // Let's safe-merge: only if memory is empty
+                    roadmapData.memoPage = backup.memoPage;
+                    saveData();
+                    triggerUIUpdate();
+                    console.log("✅ Auto-restored memo data from backup.");
+                }
+            }
+        }
+    }
+}, 1000);

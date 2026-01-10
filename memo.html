@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>슈퍼문 로드맵 - 메모 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- SortableJS for Drag and Drop -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .sidebar-link {
+            transition: all 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border-right: 3px solid #60a5fa;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+
+        .memo-block-content {
+            resize: vertical;
+            min-height: 100px;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { dark: '#0f172a', card: '#1e293b' }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-dark text-white min-h-screen flex flex-col lg:flex-row shadow-2xl relative overflow-x-hidden">
+    <script src="sidebar.js"></script>
+    <script>renderSidebar('memo');</script>
+
+    <main class="flex-1 min-h-screen bg-dark p-4 lg:p-8 relative">
+        <div class="max-w-7xl mx-auto space-y-8 pb-20">
+            <div>
+                <h2 id="pageTitle" class="text-3xl font-bold mb-2 cursor-pointer hover:text-blue-400 transition"
+                    onclick="togglePageTitleEdit('memo')" title="클릭하여 제목 수정">메모 관리</h2>
+                <p id="pageSubtitle" class="text-gray-400 text-sm cursor-pointer hover:text-blue-400 transition"
+                    onclick="togglePageSubtitleEdit()" title="클릭하여 설명 수정">공통 메모와 연도별 메모를 자유롭게 관리하세요.</p>
+            </div>
+
+            <!-- Two Columns for Memos -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+
+                <!-- Common Memo Column -->
+                <div class="flex flex-col gap-4">
+                    <div class="flex flex-wrap justify-between items-center glass-panel p-3 lg:p-4 rounded-xl gap-2">
+                        <h3 class="text-xl font-bold text-yellow-500 whitespace-nowrap">📌 공통 메모</h3>
+                        <button onclick="addNewMemoBlock('common')"
+                            class="bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 px-3 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 whitespace-nowrap">
+                            <span>＋</span> 메모 추가
+                        </button>
+                    </div>
+                    <div id="commonMemoList" class="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[200px] pb-10">
+                        <!-- Memo Blocks will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Yearly Memo Column -->
+                <div class="flex flex-col gap-4">
+                    <div class="flex flex-wrap justify-between items-center glass-panel p-3 lg:p-4 rounded-xl gap-2">
+                        <h3 class="text-xl font-bold text-blue-400 flex items-center gap-2 whitespace-nowrap">
+                            <span id="currentYearDisplay">2026</span>년 메모
+                        </h3>
+                        <div class="flex gap-2 items-center">
+                            <button onclick="changeYear(-1)"
+                                class="text-gray-400 hover:text-white px-2 text-lg">◀</button>
+                            <button onclick="changeYear(1)"
+                                class="text-gray-400 hover:text-white px-2 text-lg">▶</button>
+                            <button onclick="addNewMemoBlock('yearly')"
+                                class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ml-2 whitespace-nowrap">
+                                <span>＋</span> 메모 추가
+                            </button>
+                        </div>
+                    </div>
+                    <div id="yearlyMemoList" class="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[200px] pb-10">
+                        <!-- Memo Blocks will be rendered here -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Settings Modal for Memo -->
+    <div id="memoSettingsModal"
+        class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[100] backdrop-blur-sm">
+        <div
+            class="bg-card glass-panel p-6 rounded-2xl w-[90%] max-w-sm shadow-2xl border border-white/10 animate-in fade-in zoom-in duration-200">
+            <h3 class="text-lg font-bold mb-4 text-white">메모 설정</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-gray-400 block mb-2">제목 크기</label>
+                    <div class="flex gap-2">
+                        <button onclick="setMemoTitleSize('text-base')"
+                            class="flex-1 bg-gray-800 hover:bg-gray-700 py-2 rounded text-base">가</button>
+                        <button onclick="setMemoTitleSize('text-lg')"
+                            class="flex-1 bg-gray-800 hover:bg-gray-700 py-2 rounded text-lg font-bold">가</button>
+                        <button onclick="setMemoTitleSize('text-xl')"
+                            class="flex-1 bg-gray-800 hover:bg-gray-700 py-2 rounded text-xl font-bold">가</button>
+                        <button onclick="setMemoTitleSize('text-2xl')"
+                            class="flex-1 bg-gray-800 hover:bg-gray-700 py-2 rounded text-2xl font-bold">가</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeMemoSettings()"
+                    class="px-4 py-2 text-sm text-gray-400 hover:text-white">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="firebase_init.js"></script>
+
+    <script src="data.js"></script>
+    <script src="memo.js"></script>
+    <script>
+        window.addEventListener('load', () => {
+            // Initial load handled in memo.js or here
+        });
+    </script>
+</body>
+
+</html>
