@@ -7,14 +7,19 @@ let sortState = {
     direction: 'asc' // or 'desc'
 };
 
-const formatMoneyFull = (amount) => {
+const formatMoneyFull = (amount, mode = 'auto') => {
     if (amount === undefined || amount === null || amount === '') return '';
     const num = typeof amount === 'string' ? parseFloat(amount.replace(/,/g, '')) : amount;
     if (isNaN(num)) return amount;
 
-    if (Number.isInteger(num)) {
-        return new Intl.NumberFormat('ko-KR').format(num);
+    // mode: 'auto', 'integer', 'decimal'
+    if (mode === 'integer') {
+        return new Intl.NumberFormat('ko-KR').format(Math.round(num));
+    } else if (mode === 'decimal') {
+        return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
     } else {
+        // Auto
+        if (Number.isInteger(num)) return new Intl.NumberFormat('ko-KR').format(num);
         return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
     }
 };
@@ -1119,7 +1124,17 @@ function renderYearlyTable() {
             }
 
 
-            let displayVal = formatMoneyFull(val);
+
+            let fmtMode = 'auto';
+            if (isBusiness) {
+                const isRate = (item.category === '환율');
+                const hasKRW = (item.content || '').toUpperCase().includes('KRW');
+                if (isRate) fmtMode = 'decimal';
+                else if (hasKRW) fmtMode = 'integer';
+                else fmtMode = 'decimal'; // Default 2 decimals for Business
+            }
+
+            let displayVal = formatMoneyFull(val, fmtMode);
             if (val === 0) displayVal = '<span class="text-gray-600">-</span>';
 
             if (isInstallment) {
