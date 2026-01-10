@@ -425,8 +425,10 @@ window.onRowDrop = function (e, targetId) {
 
 // --- Add Item Modal (Monthly Mode) ---
 function openAddItemModal(itemId = null) {
+    const currentPageType = window.currentPageType;
     const modal = document.getElementById('addItemModal');
     if (modal) {
+        modal.classList.remove('hidden');
         modal.style.display = 'flex';
 
         const saveBtn = modal.querySelector('button[onclick="confirmAddItem()"]');
@@ -439,13 +441,13 @@ function openAddItemModal(itemId = null) {
 
         // Date Input
         const dateDiv = document.getElementById('addItemDateDiv');
-        const dateInput = document.getElementById('addItemDate');
 
         // Default View State
         if (dateDiv) dateDiv.style.display = (currentPageType === 'cash' || currentPageType === 'other_income') ? 'block' : 'none';
 
-        if (cardSelect && cardSelect.parentElement) {
-            cardSelect.parentElement.style.display = (currentPageType === 'income' || currentPageType === 'other_income' || currentPageType === 'fixed' || currentPageType === 'variable' || currentPageType === 'cash') ? 'none' : 'block';
+        const cardEl = document.getElementById('addItemCard');
+        if (cardEl && cardEl.parentElement) {
+            cardEl.parentElement.style.display = (currentPageType === 'income' || currentPageType === 'other_income' || currentPageType === 'fixed' || currentPageType === 'variable' || currentPageType === 'cash') ? 'none' : 'block';
         }
 
         // Bank Label
@@ -497,7 +499,6 @@ function openAddItemModal(itemId = null) {
             if (!itemId) bankSelect.value = "";
         }
 
-        const cardEl = document.getElementById('addItemCard');
         if (cardEl && (currentPageType !== 'income' && currentPageType !== 'other_income')) {
             let cards = roadmapData.cards[currentPageType] || [];
 
