@@ -403,11 +403,17 @@ window.renderMemos = function (containerId = 'memoContainer') {
         </div>`;
 
     const isTaxPage = currentPageType === 'tax_management';
-    const containerClass = isTaxPage
-        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 h-[150px] overflow-y-auto pr-1 custom-scrollbar"
-        : (isBusiness
-            ? "grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar"
-            : "space-y-2 max-h-24 overflow-y-auto pr-1 custom-scrollbar");
+    const isInvestmentPage = currentPageType === 'investment';
+
+    let containerClass = "space-y-2 max-h-24 overflow-y-auto pr-1 custom-scrollbar";
+
+    if (isTaxPage) {
+        containerClass = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 h-[150px] overflow-y-auto pr-1 custom-scrollbar";
+    } else if (isInvestmentPage) {
+        containerClass = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 h-[150px] overflow-y-auto pr-1 custom-scrollbar";
+    } else if (isBusiness) {
+        containerClass = "grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar";
+    }
 
     if (commonMemos.length === 0) {
         html += '<p class="text-xs text-gray-500 italic py-2 text-center">등록된 공통 메모가 없습니다.</p>';
@@ -436,19 +442,19 @@ window.renderMemos = function (containerId = 'memoContainer') {
     // Add styles for grid view truncation
     html += `
     <style>
-        .lg\\:grid-cols-3 .text-gray-300, .lg\\:grid-cols-2 .text-gray-300 {
+        .lg\\:grid-cols-3 .text-gray-300, .lg\\:grid-cols-2 .text-gray-300, .lg\\:grid-cols-4 .text-gray-300 {
             max-height: 100px;
             overflow-y: auto;
             padding-right: 4px;
         }
-        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar, .lg\\:grid-cols-2 .text-gray-300::-webkit-scrollbar {
+        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar, .lg\\:grid-cols-2 .text-gray-300::-webkit-scrollbar, .lg\\:grid-cols-4 .text-gray-300::-webkit-scrollbar {
             width: 3px;
         }
-        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar-thumb, .lg\\:grid-cols-2 .text-gray-300::-webkit-scrollbar-thumb {
+        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar-thumb, .lg\\:grid-cols-2 .text-gray-300::-webkit-scrollbar-thumb, .lg\\:grid-cols-4 .text-gray-300::-webkit-scrollbar-thumb {
             background: rgba(255,255,255,0.3);
             border-radius: 2px;
         }
-        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar-track, .lg\\:grid-cols-2 .text-gray-300::-webkit-scrollbar-track {
+        .lg\\:grid-cols-3 .text-gray-300::-webkit-scrollbar-track, .lg\\:grid-cols-2 .text-gray-300::-webkit-scrollbar-track, .lg\\:grid-cols-4 .text-gray-300::-webkit-scrollbar-track {
             background: transparent;
         }
     </style>`;
