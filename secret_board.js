@@ -52,7 +52,8 @@ const defaultSecretBoard = {
             { id: 'note', name: '비고', width: 200, type: 'text' }
         ],
         rows: []
-    }
+    },
+    assetCategories: ['예금', '적금', '주식', '채권', '부동산', '기타']
 };
 
 function initSecretBoard() {
@@ -116,6 +117,7 @@ function initSecretBoard() {
     if (!yearData.secretBoard.assetDetails2.title) yearData.secretBoard.assetDetails2.title = "📊 자산 상세 내역 2";
     if (!yearData.secretBoard.statusSummary.title) yearData.secretBoard.statusSummary.title = "📝 자산 현황 수동 입력";
     if (!yearData.secretBoard.pageTitle) yearData.secretBoard.pageTitle = "시크릿 보드 🚩";
+    if (!yearData.secretBoard.assetCategories) yearData.secretBoard.assetCategories = ['예금', '적금', '주식', '채권', '부동산', '기타'];
     saveData();
 
     renderAllBlocks();
@@ -221,209 +223,294 @@ function updateSummaryCards() {
 // --- Generic Block Rendering (Reused from investment.js logic mostly) ---
 
 function renderBlock(blockId, tableId) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
+    try {
+        const table = document.getElementById(tableId);
+        if (!table) return;
 
-    const sb = roadmapData.years[currentYear].secretBoard;
-    const data = sb[blockId];
-    if (!data) return;
+        const sb = roadmapData.years[currentYear].secretBoard;
+        if (!sb) return;
+        const data = sb[blockId];
+        if (!data) return;
 
-    // Apply Formulas (Calculate values before rendering)
-    applyFormulas(data);
+        // Apply Formulas (Calculate values before rendering)
+        applyFormulas(data);
 
-    let html = '';
+        let html = '';
 
+        // Header
+        const indexColWidth = data.indexColWidth || 40;
+        const isAllSelected = data.allSelected || false;
 
-    // Header
-    const indexColWidth = data.indexColWidth || 40;
-    const isAllSelected = data.allSelected || false;
-
-    html += '<thead><tr class="bg-gray-800/50 text-gray-400">';
-    html += `<th class="text-center border border-white/10 relative cursor-pointer ${isAllSelected ? 'bg-blue-500/30' : ''}" 
+        html += '<thead><tr class="bg-gray-800/50 text-gray-400">';
+        html += `<th class="text-center border border-white/10 relative cursor-pointer ${isAllSelected ? 'bg-blue-500/30' : ''}" 
              style="width:${indexColWidth}px; min-width:${indexColWidth}px"
              onclick="toggleSelectAll('${blockId}')">
              #
              <div class="resizer-v" onmousedown="initResizing(event, '${blockId}', 'indexCol', -1)"></div>
              </th>`;
-    data.cols.forEach((col, idx) => {
-        const wStyle = `width:${col.width}px; min-width:${col.width}px`;
-        const bgStyle = col.color ? `background-color:${col.color}20` : ''; // 20 hex alpha for header
-        html += `<th class="border border-white/10 px-2 py-3 text-center relative group" style="${wStyle}; ${bgStyle}">
-            <input type="text" class="header-input w-full bg-transparent text-center font-bold text-gray-300 focus:text-white transition"
-                   value="${col.name}" onchange="updateColName('${blockId}', ${idx}, this.value)">
+        data.cols.forEach((col, idx) => {
+            const wStyle = `width:${col.width}px; min-width:${col.width}px`;
+            const bgStyle = col.color ? `background-color:${col.color}20` : ''; // 20 hex alpha for header
+            html += `<th class="border border-white/10 px-2 py-3 text-center relative group" style="${wStyle}; ${bgStyle}"
+                draggable="true"
+                ondragstart="handleTableDragStart(event, '${blockId}', 'col', ${idx})"
+                ondragover="handleTableDragOver(event)"
+                ondrop="handleTableDrop(event, '${blockId}', 'col', ${idx})">
+            <div class="cursor-grab active:cursor-grabbing">
+                <input type="text" class="header-input w-full bg-transparent text-center font-bold text-gray-300 focus:text-white transition cursor-text"
+                       value="${col.name}" onchange="updateColName('${blockId}', ${idx}, this.value)" onclick="event.stopPropagation()">
+            </div>
             <div class="resizer-v" onmousedown="initResizing(event, '${blockId}', 'col', ${idx})"></div>
         </th>`;
-    });
-    html += `<th class="w-10 border border-white/10"></th>`; // Delete Col
-    html += '</tr></thead>';
-
-    // Pre-calculate sums
-    let totalSum = {};
-    data.rows.forEach(row => {
-        data.cols.forEach(col => {
-            if ((col.sum || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익')) && (col.type === 'number' || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익'))) {
-                const val = row.cells[col.id];
-                // Use updated cleanNum logic in spirit (strip formatting)
-                const num = parseFloat(String(val || 0).replace(/[^0-9.-]/g, '')) || 0;
-                totalSum[col.id] = (totalSum[col.id] || 0) + num;
-            }
         });
-    });
+        html += `<th class="w-10 border border-white/10"></th>`; // Delete Col
+        html += '</tr></thead>';
 
-    // --- Auto-Calculation Logic ---
-    if (blockId === 'statusSummary') {
+        // Pre-calculate sums
+        let totalSum = {};
         data.rows.forEach(row => {
-            const assets = parseInt(String(row.cells.assets || 0).replace(/,/g, '')) || 0;
-            const liabilities = parseInt(String(row.cells.liabilities || 0).replace(/,/g, '')) || 0;
-            const netWorth = assets - liabilities;
-            row.cells.net_worth = netWorth;
-            const ratio = assets ? ((netWorth / assets) * 100).toFixed(1) + '%' : '0%';
-            row.cells.equity_ratio = ratio;
+            // Exclude Group Sum rows from Global Total
+            if (row.isGroupSum) return;
+
+            data.cols.forEach(col => {
+                if ((col.sum || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익')) && (col.type === 'number' || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익'))) {
+                    const val = row.cells[col.id];
+                    // Use updated cleanNum logic
+                    const num = parseFloat(String(val || 0).replace(/[^0-9.-]/g, '')) || 0;
+                    totalSum[col.id] = (totalSum[col.id] || 0) + num;
+                }
+            });
         });
-    } else if (['assetSummary', 'liabilitySummary', 'assetDetails', 'assetDetails2'].includes(blockId)) {
-        // Map Weight Columns to their corresponding Amount Columns (nearest left '금액')
-        const weightMap = {}; // { weightColId: amountColId }
-        data.cols.forEach((col, i) => {
-            if (col.name.includes('비중')) {
-                for (let j = i - 1; j >= 0; j--) {
-                    if (data.cols[j].name.includes('금액')) {
-                        weightMap[col.id] = data.cols[j].id;
-                        break;
+
+        // --- Calculate Group Sums Logic ---
+        // Find Category Column
+        let catColId = null;
+        if (blockId === 'assetDetails' || blockId === 'assetDetails2') {
+            // Try 'cat' first, then by name
+            const catCol = data.cols.find(c => c.id === 'cat' || c.name === '분류' || c.name === '대분류' || c.name === '자산 항목');
+            if (catCol) catColId = catCol.id;
+        }
+
+        if (catColId) {
+            data.rows.forEach(row => {
+                if (row.isGroupSum) {
+                    const targetCat = String(row.cells[catColId] || '').trim();
+                    if (targetCat) {
+                        // Calculate sums for this category
+                        data.cols.forEach(col => {
+                            if ((col.sum || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익')) && (col.type === 'number' || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익'))) {
+                                let groupTotal = 0;
+                                data.rows.forEach(r => {
+                                    if (!r.isGroupSum && String(r.cells[catColId] || '').trim() === targetCat) {
+                                        const num = parseFloat(String(r.cells[col.id] || 0).replace(/[^0-9.-]/g, '')) || 0;
+                                        groupTotal += num;
+                                    }
+                                });
+                                // Update cell value for display
+                                row.cells[col.id] = groupTotal;
+                            }
+                        });
                     }
                 }
-            }
-        });
-
-        if (Object.keys(weightMap).length > 0) {
-            data.rows.forEach(row => {
-                Object.keys(weightMap).forEach(wId => {
-                    const aId = weightMap[wId];
-                    if (aId) {
-                        const total = totalSum[aId] || 0;
-                        const val = parseInt(String(row.cells[aId] || 0).replace(/,/g, '')) || 0;
-                        const pct = total ? ((val / total) * 100).toFixed(1) + '%' : '0%';
-                        row.cells[wId] = pct;
-                    }
-                });
             });
         }
-    }
 
-    // Total Row (Top of body)
-    html += '<tbody>';
-
-    const hasSum = data.cols.some(c => c.sum || c.name.includes('금액'));
-    // Show sum row for specific blocks regardless of hasSum (to ensure layout consistency), but strictly exclude statusSummary
-    if (hasSum || (['assetSummary', 'liabilitySummary', 'assetDetails', 'assetDetails2'].includes(blockId) && data.rows.length > 0)) {
-        html += `<tr class="bg-blue-900/60 font-bold text-blue-300" style="height: 40px;">`;
-        html += `<td class="border border-white/10 p-0"><div class="w-full h-full flex items-center justify-center">∑</div></td>`;
-        data.cols.forEach(col => {
-            const wStyle = `width:${col.width}px; min-width:${col.width}px`;
-            if (col.sum || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익')) {
-                const s = totalSum[col.id] || 0;
-                // Apply difference formatting to total as well if needed? User said "Intersection shows value".
-                // Let's format it nicely.
-                let displayS = s.toLocaleString();
-                let colorClass = "text-white";
-
-                const isDiff = col.name.includes('차이') || col.name.includes('손익');
-                if (isDiff) {
-                    if (s > 0) { displayS = '▲ ' + displayS; colorClass = "text-red-400"; }
-                    else if (s < 0) { displayS = '▼ ' + displayS.replace('-', ''); colorClass = "text-blue-400"; }
-                    else { colorClass = "text-gray-400"; }
+        // --- Auto-Calculation Logic ---
+        if (blockId === 'statusSummary') {
+            data.rows.forEach(row => {
+                const assets = parseInt(String(row.cells.assets || 0).replace(/,/g, '')) || 0;
+                const liabilities = parseInt(String(row.cells.liabilities || 0).replace(/,/g, '')) || 0;
+                const netWorth = assets - liabilities;
+                row.cells.net_worth = netWorth;
+                const ratio = assets ? ((netWorth / assets) * 100).toFixed(1) + '%' : '0%';
+                row.cells.equity_ratio = ratio;
+            });
+        } else if (['assetSummary', 'liabilitySummary', 'assetDetails', 'assetDetails2'].includes(blockId)) {
+            // Map Weight Columns to their corresponding Amount Columns (nearest left '금액')
+            const weightMap = {}; // { weightColId: amountColId }
+            data.cols.forEach((col, i) => {
+                if (col.name.includes('비중')) {
+                    for (let j = i - 1; j >= 0; j--) {
+                        if (data.cols[j].name.includes('금액')) {
+                            weightMap[col.id] = data.cols[j].id;
+                            break;
+                        }
+                    }
                 }
+            });
 
-                // Wrap in div to handle padding/alignment despite table cell padding:0 rules
-                html += `<td class="border border-white/10 p-0" style="${wStyle}">
+            if (Object.keys(weightMap).length > 0) {
+                data.rows.forEach(row => {
+                    Object.keys(weightMap).forEach(wId => {
+                        const aId = weightMap[wId];
+                        if (aId) {
+                            const total = totalSum[aId] || 0;
+                            const val = parseInt(String(row.cells[aId] || 0).replace(/,/g, '')) || 0;
+                            const pct = total ? ((val / total) * 100).toFixed(1) + '%' : '0%';
+                            row.cells[wId] = pct;
+                        }
+                    });
+                });
+            }
+        }
+
+        // Total Row (Top of body)
+        html += '<tbody>';
+
+        const hasSum = data.cols.some(c => c.sum || c.name.includes('금액'));
+        // Show sum row for specific blocks regardless of hasSum (to ensure layout consistency), but strictly exclude statusSummary
+        if (hasSum || (['assetSummary', 'liabilitySummary', 'assetDetails', 'assetDetails2'].includes(blockId) && data.rows.length > 0)) {
+            html += `<tr class="bg-blue-900/60 font-bold text-blue-300" style="height: 40px;">`;
+            html += `<td class="border border-white/10 p-0"><div class="w-full h-full flex items-center justify-center">∑</div></td>`;
+            data.cols.forEach(col => {
+                const wStyle = `width:${col.width}px; min-width:${col.width}px`;
+                if (col.sum || col.name.includes('금액') || col.name.includes('차이') || col.name.includes('손익')) {
+                    const s = totalSum[col.id] || 0;
+                    let displayS = s.toLocaleString();
+                    let colorClass = "text-white";
+
+                    const isDiff = col.name.includes('차이') || col.name.includes('손익');
+                    if (isDiff) {
+                        if (s > 0) { displayS = '▲ ' + displayS; colorClass = "text-red-400"; }
+                        else if (s < 0) { displayS = '▼ ' + displayS.replace('-', ''); colorClass = "text-blue-400"; }
+                        else { colorClass = "text-gray-400"; }
+                    }
+
+                    html += `<td class="border border-white/10 p-0" style="${wStyle}">
                     <div class="w-full h-full flex items-center justify-center px-2 overflow-hidden text-ellipsis whitespace-nowrap ${colorClass}">
                         ${displayS}
                     </div>
                 </td>`;
+                } else {
+                    html += `<td class="border border-white/10" style="${wStyle}"></td>`;
+                }
+            });
+            html += `<td class="border border-white/10"></td></tr>`;
+        }
+
+        // Body Rows
+        const firstColId = data.cols[0] ? data.cols[0].id : null;
+
+        data.rows.forEach((row, rIdx) => {
+            const hStyle = row.height ? `height:${row.height}px` : '';
+            // Add selection highlight logic for statusSummary
+            const isSelected = (blockId === 'statusSummary' && (row.id === (roadmapData.years[currentYear].secretBoard.selectedStatusRowId || data.rows[0]?.id)));
+
+            // Special Style for Group Sum Row
+            let rowClass = isSelected ? 'bg-blue-900/40' : 'hover:bg-white/5';
+            if (row.isGroupSum) {
+                rowClass = 'bg-indigo-900/40 font-bold border-y-2 border-indigo-500/30';
             } else {
-                html += `<td class="border border-white/10" style="${wStyle}"></td>`;
+                rowClass += ' transition';
             }
-        });
-        html += `<td class="border border-white/10"></td></tr>`;
-    }
+            if (blockId === 'statusSummary') rowClass += ' cursor-pointer';
 
-    // Body Rows
-    const firstColId = data.cols[0] ? data.cols[0].id : null;
+            html += `<tr data-row-id="${row.id}" class="${rowClass}" style="${hStyle}" onclick="selectStatusRow('${blockId}', '${row.id}')"
+                    draggable="true"
+                    ondragstart="handleTableDragStart(event, '${blockId}', 'row', ${rIdx})"
+                    ondragover="handleTableDragOver(event)"
+                    ondrop="handleTableDrop(event, '${blockId}', 'row', ${rIdx})">`;
 
-    data.rows.forEach((row, rIdx) => {
-        const hStyle = row.height ? `height:${row.height}px` : '';
-        // Add selection highlight logic for statusSummary
-        const isSelected = (blockId === 'statusSummary' && (row.id === (roadmapData.years[currentYear].secretBoard.selectedStatusRowId || data.rows[0]?.id)));
-        const selectClass = isSelected ? 'bg-blue-900/40' : (blockId === 'statusSummary' ? 'hover:bg-white/5 cursor-pointer' : 'hover:bg-white/5');
-
-        html += `<tr data-row-id="${row.id}" class="${selectClass} transition" style="${hStyle}" onclick="selectStatusRow('${blockId}', '${row.id}')">`;
-
-        // Row Header (Index or Name?)
-        html += `<td class="text-center text-xs text-gray-500 border border-white/10 relative">
+            // Row Header
+            html += `<td class="text-center text-xs text-gray-500 border border-white/10 relative cursor-grab active:cursor-grabbing">
              ${rIdx + 1}
              <div class="resizer-h" onmousedown="initResizing(event, '${blockId}', 'row', ${rIdx})"></div>
          </td>`;
 
-        // Check if Row should have difference formatting
-        const rowName = firstColId ? String(row.cells[firstColId] || '') : '';
-        const isRowDiff = rowName.includes('차이') || rowName.includes('손익');
+            // Check if Row should have difference formatting
+            const rowName = firstColId ? String(row.cells[firstColId] || '') : '';
+            const isRowDiff = rowName.includes('차이') || rowName.includes('손익');
 
-        data.cols.forEach((col, cIdx) => {
-            const val = row.cells[col.id] === undefined ? '' : row.cells[col.id];
+            data.cols.forEach((col, cIdx) => {
+                const val = row.cells[col.id] === undefined ? '' : row.cells[col.id];
 
-            // Formatting Logic for Difference/Profit columns
-            const isColDiff = (col.name.includes('차이') || col.name.includes('손익'));
-            const isStandardNum = (col.type === 'number' || col.name.includes('금액'));
+                // Formatting Logic
+                const isColDiff = (col.name.includes('차이') || col.name.includes('손익'));
+                const isStandardNum = (col.type === 'number' || col.name.includes('금액'));
+                const shouldFormatDiff = isColDiff || (isRowDiff && isStandardNum);
+                const isNumCol = isStandardNum || isColDiff;
 
-            // Apply formatting if Column is Diff OR (Row is Diff AND Column is Numeric)
-            const shouldFormatDiff = isColDiff || (isRowDiff && isStandardNum);
+                let displayVal = val;
+                let textColorClass = "text-white"; // FORCE WHITE
 
-            // Treat as NumCol for parsing purposes
-            const isNumCol = isStandardNum || isColDiff;
+                if (isNumCol && val !== '' && !isNaN(parseFloat(String(val).replace(/[^0-9.-]/g, '')))) {
+                    const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+                    displayVal = num.toLocaleString();
 
-            let displayVal = val;
-            let textColorClass = ""; // Default inherit
-
-            if (isNumCol && val !== '' && !isNaN(parseFloat(String(val).replace(/[^0-9.-]/g, '')))) {
-                const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
-                displayVal = num.toLocaleString();
-
-                if (shouldFormatDiff) {
-                    if (num > 0) {
-                        displayVal = '▲ ' + displayVal;
-                        textColorClass = "text-red-400 font-bold";
-                    } else if (num < 0) {
-                        displayVal = '▼ ' + displayVal.replace('-', '');
-                        textColorClass = "text-blue-400 font-bold";
-                    } else {
-                        textColorClass = "text-gray-400";
+                    if (shouldFormatDiff) {
+                        if (num > 0) {
+                            displayVal = '▲ ' + displayVal;
+                            textColorClass = "text-red-400 font-bold";
+                        } else if (num < 0) {
+                            displayVal = '▼ ' + displayVal.replace('-', '');
+                            textColorClass = "text-blue-400 font-bold";
+                        } else {
+                            textColorClass = "text-white";
+                        }
                     }
                 }
-            }
 
-            const inputClass = `table-input w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none overflow-hidden text-center ${textColorClass}`;
+                const inputClass = `table-input w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none overflow-hidden text-center ${textColorClass}`;
 
-            // Background Color Logic
-            // Row color takes precedence, or mix? Let's treat them as partial fills.
-            // If row has color, it applies to row. If col has color, it applies to col.
-            // Intersection? Row color wins.
-            let cellBgStyle = '';
-            if (row.color) cellBgStyle = `background-color:${row.color}30;`; // 30 hex alpha
-            else if (col.color) cellBgStyle = `background-color:${col.color}15;`; // 15 hex alpha
+                let cellBgStyle = '';
+                if (row.color) cellBgStyle = `background-color:${row.color}30;`;
+                else if (col.color) cellBgStyle = `background-color:${col.color}15;`;
 
-            html += `<td class="border border-white/10 px-1 relative" style="${cellBgStyle}">
-                 <textarea class="${inputClass}" onchange="updateCell('${blockId}', ${rIdx}, '${col.id}', this.value)" rows="1" style="height:100%">${displayVal}</textarea>
+                // Safe Display
+                const safeDisplayVal = (displayVal === undefined || displayVal === null) ? '' : displayVal;
+
+                // Input Generation
+                let inputHtml = '';
+
+                // Define isCatCol first
+                // Explicitly EXCLUDE '소분류' and '부채 항목' from isCatCol
+                const isCatCol = ((col.id === 'cat' && col.name !== '소분류' && col.name !== '부채 항목') || ['분류', '자산 항목', '대분류'].includes(col.name)) && col.name !== '소분류' && col.name !== '부채 항목';
+
+                // 2. Main Category Dropdown (Existing)
+                // Check by ID or Name (in case user recreated the column)
+                // Explicitly EXCLUDE '소분류' from this check
+                if (isCatCol) {
+                    const cats = sb.assetCategories || [];
+                    const currentVal = String(safeDisplayVal).trim();
+                    let options = `<option value="" class="bg-gray-800 text-white">선택</option>`;
+
+                    if (currentVal && !cats.includes(currentVal)) {
+                        options += `<option value="${currentVal}" class="bg-gray-800 text-white" selected>${currentVal} (기존)</option>`;
+                    }
+
+                    cats.forEach(c => {
+                        const selected = c === currentVal ? 'selected' : '';
+                        options += `<option value="${c}" class="bg-gray-800 text-white" ${selected}>${c}</option>`;
+                    });
+
+                    inputHtml = `<select class="${inputClass} cursor-pointer appearance-none bg-transparent" style="padding-right: 0; color: white !important;" onchange="updateCell('${blockId}', ${rIdx}, '${col.id}', this.value)">
+                    ${options}
+                </select>`;
+                } else {
+                    // Restore Text Color for Diff Columns
+                    // If shouldFormatDiff is true, we rely on classes (text-red-400 etc).
+                    // Otherwise, we force white.
+                    const colorStyle = shouldFormatDiff ? '' : 'color: white !important;';
+                    inputHtml = `<textarea class="${inputClass}" onchange="updateCell('${blockId}', ${rIdx}, '${col.id}', this.value)" rows="1" style="height:100%; ${colorStyle}">${safeDisplayVal}</textarea>`;
+                }
+
+                html += `<td class="border border-white/10 px-1 relative" style="${cellBgStyle}">
+                 ${inputHtml}
              </td>`;
-        });
+            });
 
-        // Delete Row Btn
-        html += `<td class="text-center border border-white/10">
+            // Delete Row Btn
+            html += `<td class="text-center border border-white/10">
              <button onclick="deleteRow('${blockId}', ${rIdx})" class="text-gray-600 hover:text-red-400 font-bold">×</button>
          </td>`;
-        html += '</tr>';
-    });
+            html += '</tr>';
+        });
 
-    html += '</tbody>';
-    table.innerHTML = html;
+        html += '</tbody>';
+        table.innerHTML = html;
+    } catch (e) {
+        console.error("renderBlock Error:", e);
+    }
 }
 
 // --- Data Management ---
@@ -443,6 +530,65 @@ function updateCell(blockId, rIdx, colId, val) {
     renderAllBlocks();
 }
 
+
+// --- Drag & Drop Reordering (Table) ---
+
+let dragSrcBlock = null;
+let dragType = null;
+let dragSrcIdx = null;
+
+function handleTableDragStart(e, blockId, type, idx) {
+    dragSrcBlock = blockId;
+    dragType = type;
+    dragSrcIdx = idx;
+    e.dataTransfer.effectAllowed = 'move';
+    e.target.classList.add('opacity-50');
+}
+
+function handleTableDragOver(e) {
+    if (e.preventDefault) e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleTableDrop(e, blockId, type, targetIdx) {
+    if (e.stopPropagation) e.stopPropagation();
+
+    // Only allow drop if same block and same type
+    if (dragSrcBlock === blockId && dragType === type && dragSrcIdx !== targetIdx && dragSrcIdx !== null) {
+        const sb = roadmapData.years[currentYear].secretBoard;
+        const data = sb[blockId];
+
+        if (type === 'row') {
+            const rows = data.rows;
+            // Move row in array
+            const [movedRow] = rows.splice(dragSrcIdx, 1);
+            rows.splice(targetIdx, 0, movedRow);
+        } else if (type === 'col') {
+            const cols = data.cols;
+            // Move col in array
+            const [movedCol] = cols.splice(dragSrcIdx, 1);
+            cols.splice(targetIdx, 0, movedCol);
+        }
+
+        saveData();
+        renderAllBlocks();
+    }
+
+    // Cleanup visual styles if needed
+    if (e.target) e.target.classList.remove('opacity-50');
+
+    dragSrcBlock = null;
+    dragType = null;
+    dragSrcIdx = null;
+
+    return false;
+}
+
+window.handleTableDragStart = handleTableDragStart;
+window.handleTableDragOver = handleTableDragOver;
+window.handleTableDrop = handleTableDrop;
+
 function addRow(blockId) {
     const sb = roadmapData.years[currentYear].secretBoard;
     sb[blockId].rows.push({
@@ -452,6 +598,27 @@ function addRow(blockId) {
     saveData();
     renderAllBlocks();
 }
+
+function addGroupSumRow(blockId) {
+    const sb = roadmapData.years[currentYear].secretBoard;
+    // Find First Col to set label
+    const firstColId = sb[blockId].cols[0] ? sb[blockId].cols[0].id : null;
+    const initialCells = {};
+    if (firstColId) initialCells[firstColId] = "합계";
+
+    sb[blockId].rows.push({
+        id: 'group_sum_' + Date.now(),
+        isGroupSum: true,
+        cells: initialCells
+    });
+    saveData();
+    renderAllBlocks();
+}
+
+// Export Drag Handlers to Window
+window.handleDragStart = handleDragStart;
+window.handleDragOver = handleDragOver;
+window.handleDrop = handleDrop;
 
 // --- Modal Logic ---
 let pendingModalAction = null;
@@ -634,9 +801,18 @@ function renderStructureLists() {
     const rowList = document.getElementById('rowManagerList');
     rowList.innerHTML = '';
     data.rows.forEach((row, idx) => {
-        // Find "Name" of row (first cell value usually)
+        // Find "Name" of row
+        // Priority: '소분류' name -> '소분류' id -> First Column
+        const subCatCol = data.cols.find(c => c.name === '소분류');
         const firstColId = data.cols[0] ? data.cols[0].id : null;
-        const rowName = firstColId ? (row.cells[firstColId] || `Row ${idx + 1}`) : `Row ${idx + 1}`;
+
+        let rowName = `Row ${idx + 1}`;
+        if (subCatCol) {
+            rowName = row.cells[subCatCol.id] || `Row ${idx + 1}`;
+        } else if (firstColId) {
+            rowName = row.cells[firstColId] || `Row ${idx + 1}`;
+        }
+
         const hasFormula = !!row.formula;
 
         rowList.innerHTML += `
@@ -671,7 +847,7 @@ function editStructColFormula(idx) {
 function editStructRowFormula(idx) {
     const sb = roadmapData.years[currentYear].secretBoard;
     const row = sb[activeStructBlock].rows[idx];
-    const newFormula = prompt('행 계산 수식을 입력하세요.\n(예: [매출] + [기타])', row.formula || '');
+    const newFormula = prompt('행 계산 수식을 입력하세요.\n(예: [매출] - [기타] 또는 #1 + #2)', row.formula || '');
     if (newFormula !== null) {
         row.formula = newFormula.trim();
         saveData();
@@ -754,8 +930,19 @@ function moveStructRow(idx, dir) { // Legacy safe keep
 function initResizing(e, blockId, type, idx) {
     e.preventDefault(); e.stopPropagation();
     const sb = roadmapData.years[currentYear].secretBoard;
-    const tableId = (blockId === 'assetSummary' ? 'tableAssetSummary' : (blockId === 'liabilitySummary' ? 'tableLiabilitySummary' : (blockId === 'statusSummary' ? 'tableStatusSummary' : 'tableAssetDetails')));
+    let tableId = '';
+
+    if (blockId === 'assetSummary') tableId = 'tableAssetSummary';
+    else if (blockId === 'liabilitySummary') tableId = 'tableLiabilitySummary';
+    else if (blockId === 'statusSummary') tableId = 'tableStatusSummary';
+    else if (blockId === 'assetDetails') tableId = 'tableAssetDetails';
+    else if (blockId === 'assetDetails2') tableId = 'tableAssetDetails2';
+
     const table = document.getElementById(tableId);
+    if (!table) {
+        console.error(`Resizing Error: Table for block '${blockId}' not found (ID: ${tableId})`);
+        return;
+    }
 
     let targetElement;
     let startDim = 0;
@@ -1033,8 +1220,15 @@ function applyFormulas(data) {
     // Evaluation Helper
     const evalFormula = (formula, contextVars) => {
         try {
+            // Replace #N (Row Numbers)
+            let parsed = formula.replace(/#(\d+)/g, (match, p1) => {
+                const key = '#' + p1;
+                const val = contextVars[key];
+                return (val !== undefined && val !== null) ? val : 0;
+            });
+
             // Replace [Name] with value
-            const parsed = formula.replace(/\[([^\]]+)\]/g, (match, p1) => {
+            parsed = parsed.replace(/\[([^\]]+)\]/g, (match, p1) => {
                 const key = norm(p1);
                 const val = contextVars[key];
                 return (val !== undefined && val !== null) ? val : 0;
@@ -1067,9 +1261,14 @@ function applyFormulas(data) {
 
             // Context: Other rows' values in THIS column
             const context = {};
+            // Name based
             Object.keys(rowMap).forEach(key => {
                 const r = rowMap[key];
                 context[key] = cleanNum(r.cells[col.id]);
+            });
+            // Index based (#1, #2...)
+            data.rows.forEach((r, idx) => {
+                context['#' + (idx + 1)] = cleanNum(r.cells[col.id]);
             });
 
             const res = evalFormula(row.formula, context);
@@ -1100,3 +1299,155 @@ window.updateUI = updateUI;
 // Call checkLockStatus immediately to prevent flash
 document.addEventListener('DOMContentLoaded', checkLockStatus);
 window.addEventListener('load', initSecretBoard);
+
+// --- Asset Category Manager ---
+
+// --- Modal Logic ---
+let activeCategoryBlock = null; // Track which block opened the manager
+
+function openAssetCategoryManager(blockId) {
+    activeCategoryBlock = blockId;
+    const modal = document.getElementById('assetCategoryModal');
+    if (!modal) return;
+
+    // Update Title based on Context
+    const titleEl = modal.querySelector('h3');
+    if (blockId === 'assetDetails' || blockId === 'assetDetails2') {
+        titleEl.innerText = '자산 분류 관리 (소분류)';
+        document.getElementById('newAssetCategoryInput').placeholder = "새 소분류 추가 (예: 국민은행, 삼성전자...)";
+    } else {
+        titleEl.innerText = '자산 분류 관리 (대분류)';
+        document.getElementById('newAssetCategoryInput').placeholder = "새 분류 추가 (예: 예금, 주식...)";
+    }
+
+    renderAssetCategoryList();
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    document.getElementById('newAssetCategoryInput').focus();
+}
+
+function closeAssetCategoryModal() {
+    activeCategoryBlock = null;
+    const modal = document.getElementById('assetCategoryModal');
+    if (modal) modal.style.display = 'none';
+    renderAllBlocks(); // Refresh dropdowns
+}
+
+
+
+function renderAssetCategoryList() {
+    const sb = roadmapData.years[currentYear].secretBoard;
+    let cats = [];
+
+    // Determine which list to show
+    if (activeCategoryBlock === 'assetDetails' || activeCategoryBlock === 'assetDetails2') {
+        cats = sb.subAssetCategories || [];
+    } else {
+        cats = sb.assetCategories || [];
+    }
+
+    const list = document.getElementById('assetCategoryList');
+    list.innerHTML = '';
+
+    cats.forEach((cat, idx) => {
+        list.innerHTML += `
+        <div class="flex items-center bg-gray-700 p-2 rounded gap-2 text-sm justify-between group">
+            <span class="text-white font-medium pl-2">${cat}</span>
+            <div class="flex gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition">
+                 <button onclick="editAssetCategory(${idx})" class="text-gray-400 hover:text-white px-2">✎</button>
+                 <button onclick="deleteAssetCategory(${idx})" class="text-red-400 hover:text-red-300 px-2">×</button>
+            </div>
+        </div>`;
+    });
+}
+
+function addAssetCategory() {
+    const input = document.getElementById('newAssetCategoryInput');
+    const val = input.value.trim();
+    if (!val) return;
+
+    const sb = roadmapData.years[currentYear].secretBoard;
+
+    // Determine Target List
+    let targetList;
+    if (activeCategoryBlock === 'assetDetails' || activeCategoryBlock === 'assetDetails2') {
+        if (!sb.subAssetCategories) sb.subAssetCategories = [];
+        targetList = sb.subAssetCategories;
+    } else {
+        if (!sb.assetCategories) sb.assetCategories = [];
+        targetList = sb.assetCategories;
+    }
+
+    if (targetList.includes(val)) {
+        alert('이미 존재하는 분류입니다.');
+        return;
+    }
+
+    targetList.push(val);
+    saveData();
+    input.value = '';
+    renderAssetCategoryList();
+    renderAllBlocks(); // Refresh views immediately? Or on close.
+}
+
+function deleteAssetCategory(idx) {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    const sb = roadmapData.years[currentYear].secretBoard;
+
+    if (activeCategoryBlock === 'assetDetails' || activeCategoryBlock === 'assetDetails2') {
+        sb.subAssetCategories.splice(idx, 1);
+    } else {
+        sb.assetCategories.splice(idx, 1);
+    }
+
+    saveData();
+    renderAssetCategoryList();
+    renderAllBlocks();
+}
+
+// --- Edit Modal Logic ---
+let pendingEditCategoryIdx = null;
+
+// Edit Logic Updated
+function editAssetCategory(idx) {
+    pendingEditCategoryIdx = idx;
+    const sb = roadmapData.years[currentYear].secretBoard;
+    const currentVal = sb.assetCategories[idx];
+
+    const modal = document.getElementById('editCategoryModal');
+    if (!modal) return;
+
+    document.getElementById('editCategoryInput').value = currentVal;
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    document.getElementById('editCategoryInput').focus();
+}
+
+function closeEditCategoryModal() {
+    const modal = document.getElementById('editCategoryModal');
+    if (modal) modal.style.display = 'none';
+    pendingEditCategoryIdx = null;
+}
+
+function confirmEditCategory() {
+    if (pendingEditCategoryIdx === null) return;
+
+    const input = document.getElementById('editCategoryInput');
+    const newVal = input.value.trim();
+
+    if (newVal) {
+        const sb = roadmapData.years[currentYear].secretBoard;
+
+        // Prevent duplicates (optional, or allow renaming into existing?)
+        if (sb.assetCategories.includes(newVal) && sb.assetCategories.indexOf(newVal) !== pendingEditCategoryIdx) {
+            alert('이미 존재하는 분류 이름입니다.');
+            return;
+        }
+
+        sb.assetCategories[pendingEditCategoryIdx] = newVal;
+        saveData();
+        renderAssetCategoryList();
+        renderAllBlocks();
+        closeEditCategoryModal();
+    }
+}

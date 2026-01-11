@@ -455,7 +455,7 @@ window.openBackupCenter = function () {
             <li class="flex justify-between items-center bg-gray-900/50 p-3 rounded border border-white/5 hover:bg-gray-800 transition">
                 <div class="flex flex-col">
                     <span class="text-sm text-gray-300 font-bold">${item.summary || new Date(item.timestamp).toLocaleTimeString()}</span>
-                    <span class="text-xs text-gray-500">${new Date(item.timestamp).toLocaleDateString()}</span>
+                    <span class="text-xs text-gray-500">${new Date(item.timestamp).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</span>
                 </div>
                 <button onclick="restoreHistoryItem(${item.timestamp})" class="text-xs bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white px-3 py-1 rounded transition">
                     되돌리기
