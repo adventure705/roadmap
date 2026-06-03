@@ -1,3 +1,4 @@
+﻿var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 let roadmapData = {
     createYearData: () => ({
         variableIncome: new Array(12).fill(0),
@@ -129,13 +130,20 @@ let isDirty = false; // Flag to track local edits before sync
 function loadData() {
     try {
         if (typeof localStorage !== 'undefined') {
-            const currentData = localStorage.getItem('supermoon_data');
-            if (currentData) localStorage.setItem('supermoon_data_backup_last', currentData);
-        }
-
-        if (typeof localStorage !== 'undefined') {
+            const lzSaved = localStorage.getItem('supermoon_data_lz');
             const saved = localStorage.getItem('supermoon_data');
-            if (saved) {
+            
+            // Backup the old uncompressed just in case, only if we haven't already migrated
+            if (saved && !lzSaved) {
+                localStorage.setItem('supermoon_data_backup_last', saved);
+            }
+
+            if (lzSaved) {
+                try {
+                    const parsed = JSON.parse(LZString.decompressFromUTF16(lzSaved));
+                    processParsedData(parsed);
+                } catch(e) { console.error("LZ Decompress error", e); }
+            } else if (saved) {
                 const parsed = JSON.parse(saved);
                 processParsedData(parsed);
             } else {
@@ -156,7 +164,8 @@ function loadData() {
 
             auth.onAuthStateChanged(user => {
                 if (user) {
-                    const docRef = db.collection('roadmap').doc(FIXED_DOC_ID);
+                    const docRefV2 = db.collection('roadmap').doc('main_roadmap_data_v2');
+                    const docRefV1 = db.collection('roadmap').doc(FIXED_DOC_ID);
 
                     // Auth is ready, if we have pending changes, push them now
                     if (isDirty) {
@@ -164,14 +173,13 @@ function loadData() {
                         syncMemoryToCloud();
                     }
 
-                    docRef.onSnapshot(doc => {
+                    docRefV2.onSnapshot(docV2 => {
                         isCloudSyncComplete = true; // 클라우드와 연결 확인됨
 
                         // If we have unsaved local changes (Dirty), we prioritize Local over Cloud (Push)
-
                         if (isDirty) {
                             console.log("☁️ Local changes pending. Harmonizing with Cloud...");
-                            const cloudData = doc.exists ? doc.data() : null;
+                            const cloudData = docV2.exists ? JSON.parse(LZString.decompressFromUTF16(docV2.data().compressedData)) : null;
                             const localUpdated = roadmapData.updatedAt || 0;
                             const cloudUpdated = (cloudData && cloudData.updatedAt) ? cloudData.updatedAt : 0;
 
@@ -184,49 +192,63 @@ function loadData() {
                                 isDirty = false;
                             }
                         } else {
-                            if (doc.exists) {
-                                const cloudData = doc.data();
-                                const cloudUpdated = cloudData.updatedAt || 0;
-                                const localUpdated = roadmapData.updatedAt || 0;
+                            if (docV2.exists) {
+                                try {
+                                    const cloudData = JSON.parse(LZString.decompressFromUTF16(docV2.data().compressedData));
+                                    const cloudUpdated = cloudData.updatedAt || 0;
+                                    const localUpdated = roadmapData.updatedAt || 0;
 
-                                if (cloudUpdated > localUpdated) {
-                                    console.log(`✅ Cloud updated: ${new Date(cloudUpdated).toLocaleTimeString()}`);
-                                    mergeCloudData(cloudData);
-                                } else if (localUpdated > cloudUpdated && localUpdated !== 0) {
-                                    // This case happens if a previous push failed or was interrupted
-                                    console.log("⬆️ Local is ahead of Cloud. Re-syncing...");
-                                    syncMemoryToCloud();
+                                    if (cloudUpdated > localUpdated) {
+                                        console.log(`✅ Cloud updated (V2): ${new Date(cloudUpdated).toLocaleTimeString()}`);
+                                        mergeCloudData(cloudData);
+                                    } else if (localUpdated > cloudUpdated && localUpdated !== 0) {
+                                        console.log("⬆️ Local is ahead of Cloud. Re-syncing...");
+                                        syncMemoryToCloud();
+                                    }
+                                } catch(e) {
+                                    console.error("Failed to parse V2 cloud data", e);
                                 }
                             } else {
-                                // 문서가 존재하지 않으면 초기 데이터 생성
-                                console.log("📝 Firestore 문서가 없습니다. 초기 데이터를 생성합니다...");
-                                const localData = localStorage.getItem('supermoon_data');
-
-                                if (localData) {
-                                    // 로컬 스토리지에 데이터가 있으면 마이그레이션
-                                    console.log("Migrating local data to Firestore...");
-                                    docRef.set(JSON.parse(localData));
-                                } else {
-                                    // 로컬 데이터도 없으면 기본 데이터 생성
-                                    console.log("Creating default data in Firestore...");
-                                    const defaultData = {
-                                        years: roadmapData.years,
-                                        categories: roadmapData.categories,
-                                        bankAccounts: roadmapData.bankAccounts,
-                                        cards: roadmapData.cards,
-                                        commonMemos: roadmapData.commonMemos,
-                                        categoryOperators: roadmapData.categoryOperators || {},
-                                        categoryColors: roadmapData.categoryColors || {},
-                                        businessNames: roadmapData.businessNames || [],
-                                        investment: roadmapData.investment,
-                                        tax_management: roadmapData.tax_management,
-                                        management: roadmapData.management || {},
-                                        moneyPlan: roadmapData.moneyPlan,
-                                        sidebarConfig: roadmapData.sidebarConfig || null
-                                    };
-                                    docRef.set(defaultData);
-                                    localStorage.setItem('supermoon_data', JSON.stringify(defaultData));
-                                }
+                                // V2 문서가 없으면 V1 문서를 확인하여 마이그레이션
+                                console.log("📝 V2 문서가 없습니다. V1 데이터를 확인하여 마이그레이션합니다...");
+                                docRefV1.get().then(docV1 => {
+                                    if (docV1.exists) {
+                                        console.log("Migrating V1 cloud data to V2...");
+                                        const cloudDataV1 = docV1.data();
+                                        mergeCloudData(cloudDataV1);
+                                        // 강제로 업데이트 시간을 최신으로 갱신 후 V2에 저장
+                                        roadmapData.updatedAt = Date.now();
+                                        syncMemoryToCloud();
+                                    } else {
+                                        // V1도 없으면 완전 초기 데이터 생성
+                                        console.log("Creating default data in Firestore (V2)...");
+                                        const localData = localStorage.getItem('supermoon_data');
+                                        if (localData) {
+                                            roadmapData.updatedAt = Date.now();
+                                            syncMemoryToCloud();
+                                        } else {
+                                            const defaultData = {
+                                                years: roadmapData.years,
+                                                categories: roadmapData.categories,
+                                                bankAccounts: roadmapData.bankAccounts,
+                                                cards: roadmapData.cards,
+                                                commonMemos: roadmapData.commonMemos,
+                                                categoryOperators: roadmapData.categoryOperators || {},
+                                                categoryColors: roadmapData.categoryColors || {},
+                                                businessNames: roadmapData.businessNames || [],
+                                                investment: roadmapData.investment,
+                                                tax_management: roadmapData.tax_management,
+                                                management: roadmapData.management || {},
+                                                moneyPlan: roadmapData.moneyPlan,
+                                                sidebarConfig: roadmapData.sidebarConfig || null,
+                                                updatedAt: Date.now()
+                                            };
+                                            roadmapData = {...roadmapData, ...defaultData};
+                                            localStorage.setItem('supermoon_data', JSON.stringify(defaultData));
+                                            syncMemoryToCloud();
+                                        }
+                                    }
+                                });
                             }
                         }
                     });
@@ -238,7 +260,6 @@ function loadData() {
         if (!roadmapData.businessNames) roadmapData.businessNames = [];
     }
 }
-
 // Helper to reuse the logic from original loadData without re-typing it all if possible, 
 // but since I'm rewriting loadData, I must include the parsing logic. 
 // For brevity in this tool call, I will assume 'processParsedData' is not defined and I will paste the original logic inside loadData, 
@@ -258,10 +279,20 @@ function saveData(forceHistory = false) {
         isDirty = true;
         roadmapData.updatedAt = Date.now();
         const dataStr = JSON.stringify(roadmapData);
+        const compressed = LZString.compressToUTF16(dataStr);
 
         // 1. Local Save First (Instant persistence)
-        localStorage.setItem('supermoon_data', dataStr);
-        localStorage.setItem('supermoon_data_backup_last', dataStr); // Immediate Backup
+        try {
+            localStorage.setItem('supermoon_data_lz', compressed);
+            localStorage.removeItem('supermoon_data'); // Delete old uncompressed to free space if successful
+            // Backup
+            localStorage.setItem('supermoon_data_backup_last', dataStr); // Immediate Backup
+        } catch(e) {
+            if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
+                alert("⚠️ 경고: 데이터 용량이 가득 차서 저장되지 않았습니다! 기존 데이터를 백업하고 불필요한 데이터를 지워주세요.");
+            }
+            throw e;
+        }
 
         // 2. History Management (Time Machine)
         try {
@@ -271,7 +302,8 @@ function saveData(forceHistory = false) {
             // Save snapshot if last save was > 5 minutes ago OR history is empty OR Forced (Ctrl+S)
             const lastSave = history.length > 0 ? history[history.length - 1].timestamp : 0;
             if (forceHistory || now - lastSave > 5 * 60 * 1000) {
-                history.push({ timestamp: now, data: dataStr, summary: forceHistory ? "수동 저장 (Ctrl+S)" : new Date(now).toLocaleTimeString() });
+                // history에는 압축된 데이터를 넣어서 용량 확보
+                history.push({ timestamp: now, data: compressed, isCompressed: true, summary: forceHistory ? "수동 저장 (Ctrl+S)" : new Date(now).toLocaleTimeString() });
                 if (history.length > MAX_HISTORY_ITEMS) history.shift(); // Remove oldest
                 localStorage.setItem('supermoon_history', JSON.stringify(history));
                 console.log("🕒 History snapshot saved.");
@@ -284,7 +316,6 @@ function saveData(forceHistory = false) {
         console.error("Save Error:", e);
     }
 }
-
 // Global Ctrl+S Handler
 document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
@@ -367,7 +398,7 @@ function syncMemoryToCloud() {
     if (isSyncing) return;
     isSyncing = true;
 
-    const dataToSave = {
+    const dataToSaveObj = {
         years: roadmapData.years || {},
         categories: roadmapData.categories || {},
         bankAccounts: roadmapData.bankAccounts || {},
@@ -386,21 +417,29 @@ function syncMemoryToCloud() {
     };
 
     if (roadmapData.sidebarConfig) {
-        dataToSave.sidebarConfig = roadmapData.sidebarConfig;
+        dataToSaveObj.sidebarConfig = roadmapData.sidebarConfig;
     }
 
-    db.collection('roadmap').doc(FIXED_DOC_ID).set(dataToSave, { merge: true })
+    const compressedStr = LZString.compressToUTF16(JSON.stringify(dataToSaveObj));
+    const dataToSave = {
+        compressedData: compressedStr,
+        updatedAt: roadmapData.updatedAt || 0
+    };
+
+    db.collection('roadmap').doc('main_roadmap_data_v2').set(dataToSave, { merge: true })
         .then(() => {
-            console.log("✅ Firebase Sync Success: " + new Date(roadmapData.updatedAt).toLocaleTimeString());
+            console.log("✅ Firebase Sync Success (V2): " + new Date(roadmapData.updatedAt).toLocaleTimeString());
             isDirty = false;
             isSyncing = false;
         })
         .catch(err => {
             console.error("❌ Firebase Sync Fail:", err);
             isSyncing = false;
+            if(err.code === 'resource-exhausted' || err.message.includes('quota')) {
+                alert("⚠️ Firebase 용량이 초과되어 동기화에 실패했습니다.");
+            }
         });
 }
-
 // History UI
 window.openBackupCenter = function () {
     // Check if modal exists
@@ -468,14 +507,15 @@ window.openBackupCenter = function () {
 };
 
 window.restoreHistoryItem = function (timestamp) {
-    if (!confirm("정말로 이 시점으로 되돌리시겠습니까?\n현재 데이터는 덮어씌워집니다.")) return;
+    if (!confirm("정말로 이 시점으로 되돌리시겠습니까?
+현재 데이터는 덮어씌워집니다.")) return;
 
     const history = JSON.parse(localStorage.getItem('supermoon_history') || '[]');
     const target = history.find(h => h.timestamp === timestamp);
 
     if (target) {
         try {
-            const parsed = JSON.parse(target.data);
+            const parsed = JSON.parse(target.isCompressed ? LZString.decompressFromUTF16(target.data) : target.data);
             processParsedData(parsed);
             saveData();
             alert("복구되었습니다.");
