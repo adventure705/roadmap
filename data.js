@@ -509,8 +509,7 @@ window.openBackupCenter = function () {
 };
 
 window.restoreHistoryItem = function (timestamp) {
-    if (!confirm("정말로 이 시점으로 되돌리시겠습니까?
-현재 데이터는 덮어씌워집니다.")) return;
+    if (!confirm("정말로 이 시점으로 되돌리시겠습니까?\\n현재 데이터는 덮어씌워집니다.")) return;
 
     const history = JSON.parse(localStorage.getItem('supermoon_history') || '[]');
     const target = history.find(h => h.timestamp === timestamp);
