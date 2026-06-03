@@ -285,10 +285,16 @@ function saveData(forceHistory = false) {
 
         // 1. Local Save First (Instant persistence)
         try {
+            // 먼저 기존의 용량이 큰 압축 안 된 데이터를 지워서 공간을 확보합니다.
+            localStorage.removeItem('supermoon_data'); 
+            
+            // 압축된 데이터를 저장합니다 (공간을 확보했으므로 성공확률이 높음)
             localStorage.setItem('supermoon_data_lz', compressed);
-            localStorage.removeItem('supermoon_data'); // Delete old uncompressed to free space if successful
-            // Backup
-            localStorage.setItem('supermoon_data_backup_last', dataStr); // Immediate Backup
+            
+            // Backup (실패해도 앱이 멈추지 않도록 예외 처리)
+            try {
+                localStorage.setItem('supermoon_data_backup_last', dataStr); 
+            } catch(e) { console.warn("Quota full for backup", e); }
         } catch(e) {
             if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
                 alert("⚠️ 경고: 데이터 용량이 가득 차서 저장되지 않았습니다! 기존 데이터를 백업하고 불필요한 데이터를 지워주세요.");
