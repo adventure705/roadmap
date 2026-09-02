@@ -120,8 +120,8 @@ let roadmapData = {
 
 let isCloudSyncComplete = false; // 클라우드 데이터 수신 여부 확인용
 
-let currentYear = 2026;
-let currentMonth = 0; // 0 = Jan
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth(); // 0 = Jan, 오늘 날짜의 월로 자동 설정
 
 const FIXED_DOC_ID = 'main_roadmap_data';
 let firebaseSyncStarted = false;
