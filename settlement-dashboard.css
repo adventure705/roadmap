@@ -13,6 +13,7 @@
 #settlementDashboardTable tbody tr:hover :is(td,th) { background:#f3f0e8; }
 #settlementDashboardTable .trend-total { font-weight:600; background:#f3f0e8; }
 #settlementDashboardTable tfoot :is(td,th) { background:#e3e6d7; color:#302f25; font-weight:700; border-bottom:0; border-top:1px solid #c9cbb9; }
+#settlementDashboardTable .dashboard-total-row :is(td,th) { background:#e3e6d7; color:#302f25; font-weight:700; border-bottom:2px solid #c9cbb9; }
 #settlementDashboardSummary { font-weight:600; color:#424b36; }
 .settlement-dashboard-note { margin:14px 0 28px; }
 .settlement-dashboard-chart-heading { font-size:18px; font-weight:600; margin-bottom:8px; }
@@ -63,3 +64,5 @@ body:has(> #settlementDashboardDetails[open]) { overflow:hidden !important; }
 .settlement-merchant tfoot { background:#f3f0e8; font-weight:600; }
 .settlement-visually-hidden { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
 @media(max-width:640px) { .settlement-drilldown { padding:14px; width:calc(100% - 20px); max-height:94dvh; } .settlement-drilldown-heading { top:-14px; margin:-14px -14px 0; padding:14px; } .settlement-drilldown-stats { grid-template-columns:1fr; } .settlement-merchant summary { grid-template-columns:16px minmax(0,1fr) 120px; } .settlement-merchant-count { grid-column:2; grid-row:2; } .settlement-merchant summary strong { grid-column:3; grid-row:1 / span 2; } }
+
+.settlement-share-amount { cursor:pointer; text-decoration:underline; text-underline-offset:4px; background:transparent; border:0; padding:0; font:inherit; }

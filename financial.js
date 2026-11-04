@@ -156,6 +156,15 @@ function updateUI() {
     // Memo Monthly Refresh (Title or anything else?)
     renderMemos();
 
+    if (typeof isFinancialDashboardActive === 'function' && isFinancialDashboardActive()) {
+        ['fixedSummaryContainer', 'incomeSummaryContainer'].forEach(id => {
+            const summary = document.getElementById(id);
+            if (summary) summary.style.display = 'none';
+        });
+        renderFinancialDashboard();
+        return;
+    }
+
     if (window.currentPageType === 'fixed') {
         renderFixedSummary();
     } else if (window.currentPageType === 'income') {
@@ -964,7 +973,9 @@ function renderYearlyTable() {
     const thead = document.getElementById('sheetHeaderRow');
     const tbody = document.getElementById('sheetBody');
     const yearData = roadmapData.years[currentYear];
-    const list = yearData.details[currentPageType];
+    const list = currentPageType === 'installment' && typeof sortInstallmentDisplay === 'function'
+        ? sortInstallmentDisplay(yearData.details[currentPageType] || [])
+        : yearData.details[currentPageType];
 
     const isInstallment = currentPageType === 'installment';
     const isBusiness = currentPageType === 'business';
@@ -1000,7 +1011,7 @@ function renderYearlyTable() {
         const itemTotal = sum(item.values);
         const rowStyle = item.rowColor ? `background-color: ${item.rowColor};` : '';
         bodyHTML += `<tr class="hover:bg-white/5 transition group" style="${rowStyle}" 
-            draggable="true" 
+            draggable="${!isInstallment}" 
             ondragstart="onRowDragStart(event, '${item.id}')" 
             ondragover="onRowDragOver(event)" 
             ondrop="onRowDrop(event, '${item.id}')"
@@ -1010,8 +1021,9 @@ function renderYearlyTable() {
     value="${item.name}" onblur="updateItemName('${item.id}', this.value)">`;
 
         // If installment, show card name as well
-        if (isInstallment && item.card) {
-            nameHtml = `<div class="flex flex-col"><span class="text-xs text-blue-400 mb-0.5">${item.card}</span>${nameHtml}</div>`;
+        if (isInstallment && typeof escapeInstallmentHTML === 'function') {
+            nameHtml = `<button type="button" class="installment-open" data-installment-id="${escapeInstallmentHTML(item.id)}" title="전체 회차 원금과 이자 수정">${escapeInstallmentHTML(item.name)}</button>`;
+            if (item.card) nameHtml = `<div class="flex flex-col"><span class="text-xs text-blue-400 mb-0.5">${escapeInstallmentHTML(item.card)}</span>${nameHtml}</div>`;
         }
 
         // Body Render Order

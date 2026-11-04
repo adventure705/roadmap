@@ -98,6 +98,8 @@
         }
     </script>
     <link rel="stylesheet" href="atelier-theme.css">
+    <link rel="stylesheet" href="settlement-dashboard.css">
+    <link rel="stylesheet" href="financial-enhancements.css">
 </head>
 
 <body class="bg-dark text-white min-h-screen flex flex-col lg:flex-row shadow-2xl relative overflow-x-hidden">
@@ -163,7 +165,12 @@
             <!-- Memo Container Full Width -->
             <div id="memoContainer" class="mb-6 w-full"></div>
 
-            <div class="glass-panel rounded-xl overflow-hidden shadow-2xl">
+            <div class="financial-dashboard-switch" role="group" aria-label="보기 선택">
+                <button type="button" id="financialDetailsButton" onclick="toggleFinancialDashboard(false)" aria-pressed="true" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold">기존 내역</button>
+                <button type="button" id="financialDashboardButton" onclick="toggleFinancialDashboard(true)" aria-pressed="false" class="bg-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm font-bold">대시보드</button>
+            </div>
+            <div id="financialDashboardView" class="hidden w-full mb-6 glass-panel rounded-xl p-6"></div>
+            <div id="financialStandardView" class="glass-panel rounded-xl overflow-hidden shadow-2xl">
                 <table class="w-full text-sm text-left text-gray-300 sheet-table">
                     <thead class="text-xs text-gray-400 uppercase bg-gray-900/50">
                         <tr id="sheetHeaderRow"></tr>
@@ -312,6 +319,8 @@
     <script src="firebase_init.js"></script>
     <script src="data.js"></script>
     <script src="financial.js"></script>
+    <script src="settlement-dashboard.js"></script>
+    <script src="financial-dashboard.js"></script>
     <script>
         // Init with monthly view
         window.addEventListener('load', () => initFinancialPage('fixed', 'monthly'));

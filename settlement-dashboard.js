@@ -6,6 +6,8 @@
     let lastYear = null;
     let detailSelection = null;
     let detailFocusSelector = null;
+    let detailOrigin = 'dashboard';
+    let detailOpener = null;
     const money = value => new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(value);
     const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
     const categoryOf = item => typeof item.category === 'string' && item.category.trim() ? item.category : '미분류';
@@ -90,10 +92,10 @@
             panel.addEventListener('cancel', event => { event.preventDefault(); panel.close(); });
             panel.addEventListener('close', () => {
                 detailSelection = null;
-                renderSettlementDashboard();
+                if (detailOrigin === 'dashboard') renderSettlementDashboard();
                 const table = document.getElementById('settlementDashboardTable');
                 const opener = detailFocusSelector ? table.querySelector(detailFocusSelector) : null;
-                (opener || table.parentElement).focus({ preventScroll: true });
+                (detailOrigin === 'chart' && detailOpener?.isConnected ? detailOpener : opener || table.parentElement).focus({ preventScroll: true });
             });
             panel.addEventListener('click', event => {
                 if (event.target !== panel) return;
@@ -115,12 +117,10 @@
         document.getElementById('settlementDashboardDetailsClose').focus({ preventScroll: true });
     }
 
-    function renderChart(model) {
-        const selected = model.rows.filter(row => visibleCategories.has(row.name));
-        const host = document.getElementById('settlementTrendChart');
+    function buildDashboardTrendSVG(rows, selectedNames, year) {
+        const selected = rows.filter(row => selectedNames.has(row.name));
         if (!selected.length) {
-            host.innerHTML = '<p class="settlement-dashboard-empty">추이를 볼 카테고리를 선택하세요.</p>';
-            return;
+            return '<p class="settlement-dashboard-empty">추이를 볼 카테고리를 선택하세요.</p>';
         }
         const width = 1080, height = 350, left = 100, right = 28, top = 28, bottom = 48;
         const values = selected.flatMap(row => row.months);
@@ -130,7 +130,7 @@
         const high = max > 0 ? max + span * .12 : (min < 0 ? 0 : 1);
         const x = month => left + month * (width - left - right) / 11;
         const y = value => top + (high - value) * (height - top - bottom) / (high - low);
-        let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="settlementTrendTitle settlementTrendDesc"><title id="settlementTrendTitle">${escapeHTML(lastYear)}년 카테고리별 월별 지출 추이</title><desc id="settlementTrendDesc">가로축은 1월부터 12월, 세로축은 원 단위 지출액입니다. 정확한 금액은 위 표에서도 확인할 수 있습니다.</desc>`;
+        let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="settlementTrendTitle settlementTrendDesc"><title id="settlementTrendTitle">${escapeHTML(year)}년 카테고리별 월별 금액 추이</title><desc id="settlementTrendDesc">가로축은 1월부터 12월, 세로축은 원 단위 금액입니다. 정확한 금액은 위 표에서도 확인할 수 있습니다.</desc>`;
         for (let tick = 0; tick <= 4; tick++) {
             const value = low + (high - low) * tick / 4;
             svg += `<line x1="${left}" y1="${y(value)}" x2="${width - right}" y2="${y(value)}" stroke="#ded9cc"/><text x="${left - 12}" y="${y(value) + 4}" text-anchor="end" class="trend-axis">${money(Math.round(value))}</text>`;
@@ -138,7 +138,7 @@
         if (min < 0) svg += `<line x1="${left}" y1="${y(0)}" x2="${width - right}" y2="${y(0)}" stroke="#746f62" stroke-dasharray="4 4"/>`;
         for (let month = 0; month < 12; month++) svg += `<text x="${x(month)}" y="${height - 16}" text-anchor="middle" class="trend-axis">${month + 1}월</text>`;
         selected.forEach(row => {
-            const index = model.rows.indexOf(row), color = COLORS[index % COLORS.length];
+            const index = rows.indexOf(row), color = COLORS[index % COLORS.length];
             const dash = index >= COLORS.length ? ' stroke-dasharray="6 4"' : '';
             svg += `<polyline points="${row.months.map((value, month) => `${x(month)},${y(value)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="2.5"${dash}/>`;
             row.months.forEach((value, month) => {
@@ -146,7 +146,11 @@
                 svg += `<circle cx="${x(month)}" cy="${y(value)}" r="4" fill="${color}" stroke="#fcfaf5" stroke-width="1.5" tabindex="0" role="img" aria-label="${escapeHTML(label)}"><title>${escapeHTML(label)}</title></circle>`;
             });
         });
-        host.innerHTML = svg + '</svg>';
+        return svg + '</svg>';
+    }
+
+    function renderChart(model) {
+        document.getElementById('settlementTrendChart').innerHTML = buildDashboardTrendSVG(model.rows, visibleCategories, lastYear);
     }
 
     function renderSettlementDashboard() {
@@ -166,13 +170,15 @@
             return `<tr><th scope="row"><span class="trend-swatch" style="background:${COLORS[index % COLORS.length]}"></span>${escapeHTML(row.name)}</th>${monthCells}<td class="trend-total">${money(Math.round(row.total / 12))}</td><td class="trend-total">${money(row.total)}</td></tr>`;
         }).join('');
         const table = document.getElementById('settlementDashboardTable');
-        table.innerHTML = `<caption>${year}년 카테고리별 월별 지출 · 단위: 원 · 월평균은 12개월 기준, 원 단위 반올림 · 월별 금액을 누르면 상세내역이 열립니다.</caption><thead>${head}</thead><tbody>${body || '<tr><td colspan="15">등록된 지출 내역이 없습니다.</td></tr>'}</tbody><tfoot><tr><th scope="row">합계</th>${cells(model.monthlyTotals)}<td>${money(Math.round(model.total / 12))}</td><td>${money(model.total)}</td></tr></tfoot>`;
+        table.innerHTML = `<caption>${year}년 카테고리별 월별 지출 · 단위: 원 · 월평균은 12개월 기준, 원 단위 반올림 · 월별 금액을 누르면 상세내역이 열립니다.</caption><thead>${head}</thead><tbody><tr class="dashboard-total-row"><th scope="row">합계</th>${cells(model.monthlyTotals)}<td>${money(Math.round(model.total / 12))}</td><td>${money(model.total)}</td></tr>${body || '<tr><td colspan="15">등록된 지출 내역이 없습니다.</td></tr>'}</tbody>`;
         table.onclick = event => {
             const button = event.target.closest('button[data-dashboard-month]');
             if (!button || !table.contains(button)) return;
             const month = Number(button.dataset.dashboardMonth), index = Number(button.dataset.dashboardCategory);
             if (!Number.isInteger(month) || month < 0 || month > 11 || !model.rows[index]) return;
             detailSelection = { year, month, category: model.rows[index].name };
+            detailOrigin = 'dashboard';
+            detailOpener = null;
             detailFocusSelector = `[data-dashboard-month="${month}"][data-dashboard-category="${index}"]`;
             renderSettlementDashboard();
         };
@@ -200,5 +206,14 @@
     }
 
     root.renderSettlementDashboard = renderSettlementDashboard;
-    if (typeof module !== 'undefined' && module.exports) module.exports = { buildDashboard, buildDetails, monthOf };
+    root.buildDashboardTrendSVG = buildDashboardTrendSVG;
+    root.openSettlementCategoryDetails = (category, year, month, opener) => {
+        detailOrigin = 'chart';
+        detailOpener = opener || null;
+        detailFocusSelector = null;
+        detailSelection = { year, month, category };
+        renderDetails();
+    };
+    root.refreshSettlementCategoryDetails = () => { if (detailOrigin === 'chart' && detailSelection) renderDetails(); };
+    if (typeof module !== 'undefined' && module.exports) module.exports = { buildDashboard, buildDetails, monthOf, buildDashboardTrendSVG };
 })(typeof window !== 'undefined' ? window : globalThis);

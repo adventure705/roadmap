@@ -39,6 +39,7 @@ function renderSettlementUI() {
         renderSettlementWeekly();
     }
     if (settlementTransactionManagerOpen) renderTransactionList(getMonthlyTransactions());
+    if (typeof refreshSettlementCategoryDetails === 'function') refreshSettlementCategoryDetails();
     renderMemos();
 }
 
@@ -154,7 +155,7 @@ function buildSettlementShareLegend(items) {
     const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
     const rows = items.slice().sort((a, b) => b.share - a.share || a.index - b.index);
     return '<h4>카테고리별 비율</h4><ol class="settlement-share-list">' + rows.map((row, rank) =>
-        `<li><span class="settlement-share-rank">${rank + 1}</span><span class="settlement-share-dot" style="background-color:${escape(row.color)}"></span><span class="settlement-share-name">${escape(row.name)}</span><strong>${row.shareRounded}%</strong><span class="settlement-share-amount">${escape(formatMoneyFull(row.amount))}원</span></li>`
+        `<li><span class="settlement-share-rank">${rank + 1}</span><span class="settlement-share-dot" style="background-color:${escape(row.color)}"></span><span class="settlement-share-name">${escape(row.name)}</span><strong>${row.shareRounded}%</strong><button type="button" class="settlement-share-amount" data-settlement-category="${row.index}" aria-label="${escape(row.name)} 상세내역">${escape(formatMoneyFull(row.amount))}원</button></li>`
     ).join('') + '</ol>';
 }
 
@@ -252,7 +253,15 @@ function renderSettlementMonthly() {
     tbody.innerHTML = html;
 
     const legendEl = document.getElementById('settlementChartLegend');
-    if (legendEl) legendEl.innerHTML = buildSettlementShareLegend(legendItems);
+    if (legendEl) {
+        legendEl.innerHTML = buildSettlementShareLegend(legendItems);
+        legendEl.onclick = event => {
+            const button = event.target.closest('button[data-settlement-category]');
+            if (!button || !legendEl.contains(button)) return;
+            const category = cats[Number(button.dataset.settlementCategory)];
+            if (typeof category === 'string' && typeof openSettlementCategoryDetails === 'function') openSettlementCategoryDetails(category, currentYear, currentMonth, button);
+        };
+    }
 
     if (chartEl) {
         chartEl.style.background = 'transparent';

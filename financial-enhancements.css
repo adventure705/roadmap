@@ -1,0 +1,20 @@
+.financial-dashboard-switch { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+button.installment-open { color:var(--ink,#302f25); text-align:left; font:inherit; font-weight:500; background:transparent; cursor:pointer; text-decoration:underline; text-underline-offset:4px; overflow-wrap:anywhere; }
+.settlement-share-amount { cursor:pointer; text-decoration:underline; text-underline-offset:4px; background:transparent; border:0; padding:0; font:inherit; }
+.financial-editor-dialog { width:min(1050px,calc(100% - 28px)); max-width:none; max-height:92vh; max-height:92dvh; padding:24px; box-sizing:border-box; overflow:auto; overscroll-behavior:contain; border:1px solid #c9cbb9; border-radius:12px; background:#fcfaf5; color:#302f25; font-family:inherit; }
+.financial-editor-dialog::backdrop { background:#20231db3; backdrop-filter:blur(2px); }
+body:has(> .financial-editor-dialog[open]) { overflow:hidden !important; }
+.financial-editor-dialog header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; position:sticky; top:-24px; padding:12px 0; background:#fcfaf5; z-index:2; }
+.financial-editor-dialog h3 { font-size:20px; font-weight:600; margin:0 0 6px; }
+.financial-editor-dialog p { font-size:13px; line-height:1.7; color:#676354; }
+.financial-editor-dialog button { padding:9px 16px; border:1px solid #ded9cc; border-radius:20px; background:#eae6da; color:#302f25; white-space:nowrap; }
+.financial-editor-dialog button[data-save] { background:#66694b; color:#fffdf5; border-color:#66694b; }
+.financial-editor-scroll { overflow-x:auto; }
+.financial-editor-dialog table { width:100%; min-width:720px; border-collapse:collapse; table-layout:fixed; font-size:14px; font-variant-numeric:tabular-nums; }
+.financial-editor-dialog :is(th,td) { padding:12px 8px; border-bottom:1px solid #ded9cc; text-align:right; }
+.financial-editor-dialog :is(th,td):first-child { text-align:left; width:170px; }
+.financial-editor-dialog input { width:100%; min-width:0; box-sizing:border-box; background:#fffdf8; color:#302f25; border:1px solid #c9c4b6; border-radius:4px; padding:8px; font:inherit; text-align:right; }
+.financial-editor-dialog footer { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding-top:20px; }
+.financial-editor-dialog footer p { flex:1; min-width:200px; }
+#installmentScheduleTotals { font-weight:600; color:#394a30; }
+#installmentScheduleError { color:#a4473e; min-height:22px; }
