@@ -302,11 +302,11 @@ main table :is(.table-input, .row-header-input, .header-input)::placeholder {
 #settlementPieChart .settlement-pie-center-title { fill: var(--muted, #746f62); font-family: inherit; font-size: 13px; }
 #settlementPieChart .settlement-pie-center-total { fill: var(--ink, #302f25); font-family: inherit; font-size: 18px; font-weight: 600; }
 /* Category percentage ranking beside the chart. */
-.settlement-chart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 220px; align-items: center; gap: 24px; max-width: 1120px !important; }
+.settlement-chart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; align-items: center; gap: 24px; max-width: 1120px !important; }
 #settlementChartLegend { display: block; min-width: 0; color: var(--ink); }
 #settlementChartLegend h4 { font-size: 15px; font-weight: 600; margin: 0 0 14px; }
 .settlement-share-list { list-style: none; margin: 0; padding: 0; }
-.settlement-share-list li { display: grid; grid-template-columns: 20px 9px minmax(0, 1fr) 44px; gap: 8px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.settlement-share-list li { display: grid; grid-template-columns: 20px 9px minmax(0, 1fr) 44px minmax(100px, max-content); gap: 8px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
 .settlement-share-rank { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .settlement-share-dot { width: 9px; height: 9px; border-radius: 50%; }
 .settlement-share-name { overflow-wrap: anywhere; }
@@ -315,3 +315,6 @@ main table :is(.table-input, .row-header-input, .header-input)::placeholder {
 #settlementChartLegend span[style*="color:"] {
   color: var(--ink) !important;
 }
+
+.settlement-share-amount { color: var(--ink); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) { .settlement-share-list li { grid-template-columns: 16px 8px minmax(70px, 1fr) 36px minmax(85px, max-content); gap: 5px; } #settlementChartLegend { overflow-x: auto; } }

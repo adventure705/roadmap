@@ -154,7 +154,7 @@ function buildSettlementShareLegend(items) {
     const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
     const rows = items.slice().sort((a, b) => b.share - a.share || a.index - b.index);
     return '<h4>카테고리별 비율</h4><ol class="settlement-share-list">' + rows.map((row, rank) =>
-        `<li><span class="settlement-share-rank">${rank + 1}</span><span class="settlement-share-dot" style="background-color:${escape(row.color)}"></span><span class="settlement-share-name">${escape(row.name)}</span><strong>${row.shareRounded}%</strong></li>`
+        `<li><span class="settlement-share-rank">${rank + 1}</span><span class="settlement-share-dot" style="background-color:${escape(row.color)}"></span><span class="settlement-share-name">${escape(row.name)}</span><strong>${row.shareRounded}%</strong><span class="settlement-share-amount">${escape(formatMoneyFull(row.amount))}원</span></li>`
     ).join('') + '</ol>';
 }
 
@@ -220,7 +220,7 @@ function renderSettlementMonthly() {
         const share = totalActual > 0 ? (actual / totalActual) * 100 : 0;
         const shareRounded = Math.round(share);
         const color = CHART_COLORS[index % CHART_COLORS.length];
-        legendItems.push({ name: cat, share, shareRounded, color, index });
+        legendItems.push({ name: cat, share, shareRounded, amount: actual, color, index });
 
         // Chart Segment
         if (share > 0) {
