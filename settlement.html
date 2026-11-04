@@ -144,7 +144,7 @@
                                 class="bg-gray-700 text-gray-300 px-3 py-1 rounded text-sm font-bold hover:bg-gray-600 transition">주간
                                 보기</button>
                             <button onclick="toggleSettlementView('dashboard')" id="btnDashboardView"
-                                class="bg-gray-700 text-gray-300 px-3 py-1 rounded text-sm font-bold hover:bg-gray-600 transition">DashBoard</button>
+                                class="bg-gray-700 text-gray-300 px-3 py-1 rounded text-sm font-bold hover:bg-gray-600 transition">대시보드</button>
                             <button onclick="openTransactionManager()"
                                 class="bg-purple-600 text-white px-3 py-1 rounded text-sm font-bold hover:bg-purple-500 transition shadow-lg border border-purple-400/30">
                                 📋 상세 내역 관리
@@ -173,11 +173,11 @@
             <div id="settlementDashboardView" class="hidden w-full mb-6 glass-panel rounded-xl p-6">
                 <div class="settlement-dashboard-heading">
                     <div>
-                        <h3><span id="settlementDashboardYear"></span> 지출 DashBoard</h3>
+                        <h3><span id="settlementDashboardYear"></span> 지출 대시보드</h3>
                         <p>카테고리별 월별 지출과 연간 흐름을 한눈에 확인하세요.</p>
                         <p id="settlementDashboardSummary" aria-live="polite"></p>
                     </div>
-                    <label><input type="checkbox" id="settlementDashboardFixed" onchange="renderSettlementDashboard()">고정지출 포함</label>
+                    <label><input type="checkbox" id="settlementDashboardFixed" checked onchange="renderSettlementDashboard()">고정지출 포함</label>
                 </div>
                 <div class="settlement-dashboard-scroll" tabindex="0" role="region" aria-label="월별 카테고리 지출표, 가로로 스크롤할 수 있습니다">
                     <table id="settlementDashboardTable"></table>

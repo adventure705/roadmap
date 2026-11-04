@@ -3,7 +3,6 @@
     'use strict';
     const COLORS = ['#506447', '#a4473e', '#376b86', '#806033', '#78577c', '#a3476d', '#545d92', '#31736b', '#97532d', '#486b6e', '#747432', '#885c59', '#4c5964', '#765443', '#5d6a32'];
     let visibleCategories = null;
-    let knownCategories = new Set();
     let lastYear = null;
     let detailSelection = null;
     let detailFocusSelector = null;
@@ -156,9 +155,7 @@
         const year = currentYear;
         const model = buildDashboard(roadmapData.years?.[year], roadmapData.categories?.settlement, year, document.getElementById('settlementDashboardFixed').checked);
         if (detailSelection && (detailSelection.year !== year || !model.rows.some(row => row.name === detailSelection.category))) detailSelection = null;
-        if (lastYear !== year || visibleCategories === null) visibleCategories = new Set(model.rows.map(row => row.name));
-        else model.rows.forEach(row => { if (!knownCategories.has(row.name)) visibleCategories.add(row.name); });
-        knownCategories = new Set(model.rows.map(row => row.name));
+        if (lastYear !== year || visibleCategories === null) visibleCategories = new Set();
         lastYear = year;
         document.getElementById('settlementDashboardYear').textContent = `${year}년`;
         document.getElementById('settlementDashboardSummary').textContent = `연간 합계 ${money(model.total)}원 · ${money(model.count)}건`;
