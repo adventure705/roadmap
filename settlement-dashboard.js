@@ -6,6 +6,7 @@
     let knownCategories = new Set();
     let lastYear = null;
     let detailSelection = null;
+    let detailFocusSelector = null;
     const money = value => new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(value);
     const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
     const categoryOf = item => typeof item.category === 'string' && item.category.trim() ? item.category : '미분류';
@@ -79,14 +80,28 @@
 
     function renderDetails() {
         let panel = document.getElementById('settlementDashboardDetails');
-        if (!detailSelection) { if (panel) panel.hidden = true; return; }
+        if (!detailSelection) { if (panel?.open) panel.close(); return; }
         if (!panel) {
-            panel = document.createElement('section');
+            panel = document.createElement('dialog');
             panel.id = 'settlementDashboardDetails';
             panel.className = 'settlement-drilldown';
             panel.tabIndex = -1;
             panel.setAttribute('aria-labelledby', 'settlementDashboardDetailTitle');
-            document.getElementById('settlementDashboardTable').parentElement.insertAdjacentElement('afterend', panel);
+            panel.setAttribute('aria-modal', 'true');
+            panel.addEventListener('cancel', event => { event.preventDefault(); panel.close(); });
+            panel.addEventListener('close', () => {
+                detailSelection = null;
+                renderSettlementDashboard();
+                const table = document.getElementById('settlementDashboardTable');
+                const opener = detailFocusSelector ? table.querySelector(detailFocusSelector) : null;
+                (opener || table.parentElement).focus({ preventScroll: true });
+            });
+            panel.addEventListener('click', event => {
+                if (event.target !== panel) return;
+                const bounds = panel.getBoundingClientRect();
+                if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) panel.close();
+            });
+            document.body.append(panel);
         }
         const { year, month, category } = detailSelection;
         const data = buildDetails(roadmapData.years?.[year], year, month, category);
@@ -96,12 +111,9 @@
             return `<details class="settlement-merchant" open><summary><span class="settlement-merchant-name">${index + 1}. ${escapeHTML(row.name)}</span><span class="settlement-merchant-count">사용 ${row.usageCount}회 · 내역 ${row.count}건${row.refundCount ? ` · 환불 ${row.refundCount}건` : ''}</span><strong>${money(row.total)}원</strong></summary><div class="settlement-record-scroll"><table><caption class="settlement-visually-hidden">${escapeHTML(row.name)} 개별 내역 · 금액 내림차순</caption><thead><tr><th scope="col">날짜</th><th scope="col">내용</th><th scope="col">금액</th></tr></thead><tbody>${items}</tbody><tfoot><tr><th colspan="2" scope="row">합계 · ${row.count}건</th><td>${money(row.total)}원</td></tr></tfoot></table></div></details>`;
         }).join('');
         panel.innerHTML = `<div class="settlement-drilldown-heading"><div><h4 id="settlementDashboardDetailTitle">${year}년 ${month + 1}월 · ${escapeHTML(category)} 상세내역</h4><p>같은 사용처·내용별 합계와 개별 내역을 금액 내림차순으로 표시합니다.</p></div><button type="button" id="settlementDashboardDetailsClose">상세 닫기</button></div><div class="settlement-drilldown-stats"><p>합계<strong>${money(data.total)}원</strong></p><p>사용 횟수<strong>${data.usageCount}회 <small>· 내역 ${data.count}건</small></strong></p><p>가장 많이 쓴 곳<strong>${top ? escapeHTML(top.name) : '없음'}</strong>${top ? `<small>${money(top.total)}원 · ${top.usageCount}회</small>` : ''}</p></div><p class="settlement-dashboard-note">사용 횟수는 양수 지출 기준입니다. 환불은 합계에서 차감하고 내역에는 포함합니다. 각 묶음을 눌러 접거나 펼칠 수 있습니다.</p><div class="settlement-merchant-list">${records || '<p class="settlement-dashboard-empty">이 월·카테고리에는 등록된 지출 내역이 없습니다.</p>'}</div>`;
-        panel.hidden = false;
-        document.getElementById('settlementDashboardDetailsClose').onclick = () => {
-            detailSelection = null;
-            renderSettlementDashboard();
-            document.getElementById('settlementDashboardTable').parentElement.focus();
-        };
+        document.getElementById('settlementDashboardDetailsClose').onclick = () => panel.close();
+        if (!panel.open) panel.showModal();
+        document.getElementById('settlementDashboardDetailsClose').focus({ preventScroll: true });
     }
 
     function renderChart(model) {
@@ -164,10 +176,8 @@
             const month = Number(button.dataset.dashboardMonth), index = Number(button.dataset.dashboardCategory);
             if (!Number.isInteger(month) || month < 0 || month > 11 || !model.rows[index]) return;
             detailSelection = { year, month, category: model.rows[index].name };
+            detailFocusSelector = `[data-dashboard-month="${month}"][data-dashboard-category="${index}"]`;
             renderSettlementDashboard();
-            const details = document.getElementById('settlementDashboardDetails');
-            details.focus({ preventScroll: true });
-            details.scrollIntoView({ block: 'nearest', behavior: 'auto' });
         };
         renderDetails();
         document.getElementById('settlementDashboardEmpty').hidden = model.count > 0;

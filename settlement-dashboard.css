@@ -31,9 +31,11 @@
 /* Read-only drill-down from a month/category amount. */
 #settlementDashboardTable .settlement-month-amount { display:block; width:100%; padding:5px 3px; border:0; border-radius:4px; background:transparent; color:#394a30; text-align:right; font:inherit; text-decoration:underline; text-decoration-color:#b3b9a5; text-underline-offset:4px; cursor:pointer; }
 #settlementDashboardTable .settlement-month-amount:hover, #settlementDashboardTable .settlement-month-amount[aria-pressed="true"] { background:#e3e6d7; color:#26361f; text-decoration-color:currentColor; }
-.settlement-drilldown { margin-top:20px; border:1px solid #c9cbb9; border-radius:10px; padding:22px; background:#fcfaf5; scroll-margin-top:24px; }
+.settlement-drilldown { position:fixed; inset:0; margin:auto; width:min(1000px,calc(100% - 32px)); max-width:none; max-height:90vh; max-height:90dvh; overflow:auto; overscroll-behavior:contain; box-sizing:border-box; border:1px solid #c9cbb9; border-radius:12px; padding:22px; background:#fcfaf5; color:#302f25; box-shadow:0 24px 80px #00000040; }
+.settlement-drilldown::backdrop { background:#20231db3; backdrop-filter:blur(2px); }
+body:has(> #settlementDashboardDetails[open]) { overflow:hidden !important; }
 .settlement-drilldown[hidden] { display:none; }
-.settlement-drilldown-heading { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:12px; }
+.settlement-drilldown-heading { position:sticky; top:-22px; z-index:2; display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:12px; margin:-22px -22px 0; padding:22px 22px 14px; background:#fcfaf5; border-bottom:1px solid #ded9cc; }
 .settlement-drilldown-heading h4 { font-size:19px; font-weight:600; margin:0 0 8px; color:#302f25; }
 .settlement-drilldown-heading p { font-size:13px; color:#676354; }
 .settlement-drilldown-heading button { background:#eae6da; color:#302f25; border:1px solid #ded9cc; border-radius:20px; padding:7px 13px; font-size:13px; }
@@ -41,7 +43,7 @@
 .settlement-drilldown-stats p { background:#f3f0e8; border-radius:8px; padding:14px; font-size:12px; color:#676354; overflow-wrap:anywhere; }
 .settlement-drilldown-stats strong { display:block; margin-top:7px; font-size:18px; color:#302f25; }
 .settlement-drilldown-stats small { font-size:12px; font-weight:400; }
-.settlement-merchant-list { max-height:650px; overflow-y:auto; padding-right:5px; }
+.settlement-merchant-list { padding-right:5px; }
 .settlement-merchant { border:1px solid #ded9cc; border-radius:7px; margin:12px 0; overflow:hidden; }
 .settlement-merchant summary { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; padding:14px; background:#f3f0e8; color:#302f25; cursor:pointer; }
 .settlement-merchant summary::before { content:'▸'; color:#66694b; }
@@ -57,4 +59,4 @@
 .settlement-merchant td:nth-child(2) { overflow-wrap:anywhere; }
 .settlement-merchant tfoot { background:#f3f0e8; font-weight:600; }
 .settlement-visually-hidden { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
-@media(max-width:640px) { .settlement-drilldown { padding:14px; } .settlement-drilldown-stats { grid-template-columns:1fr; } }
+@media(max-width:640px) { .settlement-drilldown { padding:14px; width:calc(100% - 20px); max-height:94dvh; } .settlement-drilldown-heading { top:-14px; margin:-14px -14px 0; padding:14px; } .settlement-drilldown-stats { grid-template-columns:1fr; } }
