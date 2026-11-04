@@ -278,3 +278,29 @@ main table :is(.table-input, .row-header-input, .header-input)::placeholder {
   -webkit-text-fill-color: var(--muted) !important;
   opacity: 1;
 }
+
+/* Settlement doughnut labels sit on saturated chart segments, not the page surface. */
+#settlementPieChart > div[style*="position: absolute"] {
+  background: #25291f;
+  color: #fffdf5 !important;
+  border-radius: 6px;
+  padding: 3px 6px;
+  text-shadow: none !important;
+  box-shadow: 0 1px 4px #00000030;
+}
+#settlementPieChart > div[style*="position: absolute"] > div {
+  color: #fffdf5 !important;
+  -webkit-text-fill-color: #fffdf5 !important;
+  filter: none;
+}
+#settlementPieChart > .rounded-full {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  backdrop-filter: none;
+}
+#settlementPieChart > .rounded-full > span:last-child {
+  color: var(--ink) !important;
+}
+#settlementChartLegend span[style*="color:"] {
+  color: var(--ink) !important;
+}
