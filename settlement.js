@@ -19,7 +19,9 @@ function updateSettlementUI() {
     const monthDisplay = document.getElementById('sheetMonthDisplay');
     if (monthDisplay) monthDisplay.innerText = (currentMonth + 1) + '월';
 
-    if (settleViewMode === 'monthly') {
+    if (settleViewMode === 'dashboard') {
+        renderSettlementDashboard();
+    } else if (settleViewMode === 'monthly') {
         renderSettlementMonthly();
     } else {
         renderSettlementWeekly();
@@ -29,22 +31,20 @@ function updateSettlementUI() {
 
 function toggleSettlementView(mode) {
     settleViewMode = mode;
-    const mBtn = document.getElementById('btnMonthlyView');
-    const wBtn = document.getElementById('btnWeeklyView');
-    const mCanvas = document.getElementById('monthlyViewCanvas');
-    const wCanvas = document.getElementById('weeklyViewCanvas');
-
-    if (mode === 'monthly') {
-        mBtn.className = "bg-blue-600 text-white px-3 py-1 rounded text-sm font-bold opacity-100";
-        wBtn.className = "bg-gray-700 text-gray-300 px-3 py-1 rounded text-sm font-bold hover:bg-gray-600 transition";
-        mCanvas.classList.remove('hidden');
-        wCanvas.classList.add('hidden');
-    } else {
-        wBtn.className = "bg-blue-600 text-white px-3 py-1 rounded text-sm font-bold opacity-100";
-        mBtn.className = "bg-gray-700 text-gray-300 px-3 py-1 rounded text-sm font-bold hover:bg-gray-600 transition";
-        wCanvas.classList.remove('hidden');
-        mCanvas.classList.add('hidden');
-    }
+    const views = [
+        ['monthly', 'btnMonthlyView', 'monthlyViewCanvas'],
+        ['weekly', 'btnWeeklyView', 'weeklyViewCanvas'],
+        ['dashboard', 'btnDashboardView', 'settlementDashboardView']
+    ];
+    views.forEach(([key, buttonId, containerId]) => {
+        const active = key === mode;
+        const button = document.getElementById(buttonId);
+        button.className = active
+            ? 'bg-blue-600 text-white px-3 py-1 rounded text-sm font-bold opacity-100'
+            : 'bg-gray-700 text-gray-300 px-3 py-1 rounded text-sm font-bold hover:bg-gray-600 transition';
+        button.setAttribute('aria-pressed', String(active));
+        document.querySelectorAll(`[id="${containerId}"]`).forEach(container => container.classList.toggle('hidden', !active));
+    });
     updateSettlementUI();
 }
 

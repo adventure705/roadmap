@@ -99,6 +99,7 @@
         }
     </script>
     <link rel="stylesheet" href="atelier-theme.css">
+    <link rel="stylesheet" href="settlement-dashboard.css">
 </head>
 
 <body class="bg-dark text-white min-h-screen flex flex-col lg:flex-row shadow-2xl relative overflow-x-hidden">
@@ -142,6 +143,8 @@
                             <button onclick="toggleSettlementView('weekly')" id="btnWeeklyView"
                                 class="bg-gray-700 text-gray-300 px-3 py-1 rounded text-sm font-bold hover:bg-gray-600 transition">주간
                                 보기</button>
+                            <button onclick="toggleSettlementView('dashboard')" id="btnDashboardView"
+                                class="bg-gray-700 text-gray-300 px-3 py-1 rounded text-sm font-bold hover:bg-gray-600 transition">DashBoard</button>
                             <button onclick="openTransactionManager()"
                                 class="bg-purple-600 text-white px-3 py-1 rounded text-sm font-bold hover:bg-purple-500 transition shadow-lg border border-purple-400/30">
                                 📋 상세 내역 관리
@@ -165,6 +168,26 @@
                 <!-- Memo -->
                 <div id="memoContainer" class="mt-1"></div>
             </header>
+
+            <!-- Annual dashboard: read-only aggregation of existing settlement transactions. -->
+            <div id="settlementDashboardView" class="hidden w-full mb-6 glass-panel rounded-xl p-6">
+                <div class="settlement-dashboard-heading">
+                    <div>
+                        <h3><span id="settlementDashboardYear"></span> 지출 DashBoard</h3>
+                        <p>카테고리별 월별 지출과 연간 흐름을 한눈에 확인하세요.</p>
+                        <p id="settlementDashboardSummary" aria-live="polite"></p>
+                    </div>
+                    <label><input type="checkbox" id="settlementDashboardFixed" onchange="renderSettlementDashboard()">고정지출 포함</label>
+                </div>
+                <div class="settlement-dashboard-scroll" tabindex="0" role="region" aria-label="월별 카테고리 지출표, 가로로 스크롤할 수 있습니다">
+                    <table id="settlementDashboardTable"></table>
+                </div>
+                <p class="settlement-dashboard-note">상단의 연도 선택으로 조회 연도를 바꿀 수 있습니다. 기존 분류 기준으로 집계하며 미분류 내역도 포함합니다.<br>내역이 없는 월은 0원, 취소·환불의 음수 금액은 차감하여 표시합니다. 그래프의 카테고리를 선택해 비교할 수 있습니다.</p>
+                <p id="settlementDashboardEmpty" class="settlement-dashboard-empty" hidden>선택한 연도와 조건에 해당하는 지출 내역이 없습니다.</p>
+                <h4 class="settlement-dashboard-chart-heading">월별 카테고리 지출 추이</h4>
+                <div id="settlementTrendLegend" role="group" aria-label="그래프에 표시할 카테고리"></div>
+                <div id="settlementTrendChart"></div>
+            </div>
 
             <!-- Monthly View Container -->
             <div id="monthlyViewCanvas" class="w-full mb-6 glass-panel rounded-xl p-4 overflow-hidden shadow-2xl">
@@ -421,6 +444,7 @@
     <script src="data.js"></script>
     <script src="financial.js"></script>
     <script src="settlement.js"></script>
+    <script src="settlement-dashboard.js"></script>
     <script>
         window.addEventListener('load', () => {
             // Ensure data is loaded first

@@ -1,0 +1,29 @@
+/* Scoped presentation for the read-only settlement dashboard. */
+#settlementDashboardView { color: var(--ink, #302f25); }
+.settlement-dashboard-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; margin-bottom:24px; }
+.settlement-dashboard-heading h3 { font-size:24px; font-weight:600; margin:0 0 8px; }
+.settlement-dashboard-heading p, .settlement-dashboard-note { font-size:13px; color:#676354; line-height:1.7; }
+.settlement-dashboard-heading label { display:flex; gap:8px; align-items:center; font-size:14px; cursor:pointer; }
+.settlement-dashboard-scroll { overflow-x:auto; border:1px solid #ded9cc; border-radius:8px; }
+#settlementDashboardTable { width:100%; min-width:1320px; border-collapse:separate; border-spacing:0; font-size:13px; font-variant-numeric:tabular-nums; }
+#settlementDashboardTable caption { text-align:left; padding:14px 16px; color:#676354; background:#fcfaf5; }
+#settlementDashboardTable :is(th,td) { padding:13px 12px; white-space:nowrap; text-align:right; border-bottom:1px solid #e7e2d6; }
+#settlementDashboardTable th:first-child { position:sticky; left:0; text-align:left; min-width:160px; z-index:1; background:#fcfaf5; border-right:1px solid #ded9cc; }
+#settlementDashboardTable thead th { background:#eae6da !important; color:#4e4b3e !important; }
+#settlementDashboardTable tbody tr:hover :is(td,th) { background:#f3f0e8; }
+#settlementDashboardTable .trend-total { font-weight:600; background:#f3f0e8; }
+#settlementDashboardTable tfoot :is(td,th) { background:#e3e6d7; color:#302f25; font-weight:700; border-bottom:0; border-top:1px solid #c9cbb9; }
+#settlementDashboardSummary { font-weight:600; color:#424b36; }
+.settlement-dashboard-note { margin:14px 0 28px; }
+.settlement-dashboard-chart-heading { font-size:18px; font-weight:600; margin-bottom:8px; }
+#settlementTrendLegend { display:flex; flex-wrap:wrap; gap:10px 18px; margin:16px 0; }
+.trend-category { display:inline-flex; align-items:center; gap:7px; font-size:13px; cursor:pointer; }
+.trend-category input { width:15px; height:15px; accent-color:#66694b; }
+.trend-swatch { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; flex-shrink:0; }
+.trend-category .trend-swatch { margin-right:0; }
+#settlementTrendChart { overflow-x:auto; padding:8px 0; }
+#settlementTrendChart svg { display:block; width:100%; min-width:700px; }
+#settlementTrendChart .trend-axis { fill:#676354; font:12px 'Malgun Gothic',sans-serif; }
+#settlementTrendChart circle:focus { outline:2px solid #302f25; outline-offset:3px; }
+.settlement-dashboard-empty { padding:20px; background:#f3f0e8; border-radius:8px; color:#676354; }
+@media(max-width:640px) { .settlement-dashboard-heading h3 { font-size:20px; } #settlementDashboardView { padding:16px; } }
