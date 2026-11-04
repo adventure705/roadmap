@@ -5,8 +5,11 @@
     let visibleCategories = null;
     let knownCategories = new Set();
     let lastYear = null;
+    let detailSelection = null;
     const money = value => new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(value);
     const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    const categoryOf = item => typeof item.category === 'string' && item.category.trim() ? item.category : '미분류';
+    const amountOf = item => typeof item.amount === 'number' ? item.amount : Number(String(item.amount ?? '').replace(/,/g, '').trim());
 
     function monthOf(date, year) {
         if (!date) return -1;
@@ -34,9 +37,9 @@
         for (const item of transactions) {
             const month = monthOf(item?.date, year);
             if (month < 0) continue;
-            const name = typeof item.category === 'string' && item.category.trim() ? item.category : '미분류';
+            const name = categoryOf(item);
             if (!includeFixed && name === '고정지출') continue;
-            const amount = typeof item.amount === 'number' ? item.amount : Number(String(item.amount ?? '').replace(/,/g, '').trim());
+            const amount = amountOf(item);
             if (!Number.isFinite(amount)) continue;
             const row = ensure(name);
             row.months[month] += amount;
@@ -46,6 +49,59 @@
         const rows = Array.from(categories.values());
         const monthlyTotals = Array.from({ length: 12 }, (_, month) => rows.reduce((sum, row) => sum + row.months[month], 0));
         return { rows, monthlyTotals, total: monthlyTotals.reduce((sum, value) => sum + value, 0), count };
+    }
+
+    function buildDetails(yearData, year, month, category) {
+        const groups = new Map();
+        for (const item of yearData?.details?.settlement || []) {
+            if (monthOf(item?.date, year) !== month || categoryOf(item) !== category) continue;
+            const amount = amountOf(item);
+            if (!Number.isFinite(amount)) continue;
+            const name = String(item.name || item.content || '내용 없음').trim() || '내용 없음';
+            if (!groups.has(name)) groups.set(name, { name, total: 0, count: 0, usageCount: 0, refundCount: 0, items: [] });
+            const group = groups.get(name);
+            group.total += amount;
+            group.count++;
+            if (amount > 0) group.usageCount++;
+            if (amount < 0) group.refundCount++;
+            group.items.push({ date: String(item.date), name: String(item.content || item.name || '내용 없음'), amount });
+        }
+        const rows = Array.from(groups.values()).sort((a, b) => b.total - a.total || b.usageCount - a.usageCount || a.name.localeCompare(b.name, 'ko'));
+        rows.forEach(row => row.items.sort((a, b) => b.amount - a.amount || b.date.localeCompare(a.date)));
+        return {
+            rows,
+            total: rows.reduce((sum, row) => sum + row.total, 0),
+            count: rows.reduce((sum, row) => sum + row.count, 0),
+            usageCount: rows.reduce((sum, row) => sum + row.usageCount, 0),
+            refundCount: rows.reduce((sum, row) => sum + row.refundCount, 0)
+        };
+    }
+
+    function renderDetails() {
+        let panel = document.getElementById('settlementDashboardDetails');
+        if (!detailSelection) { if (panel) panel.hidden = true; return; }
+        if (!panel) {
+            panel = document.createElement('section');
+            panel.id = 'settlementDashboardDetails';
+            panel.className = 'settlement-drilldown';
+            panel.tabIndex = -1;
+            panel.setAttribute('aria-labelledby', 'settlementDashboardDetailTitle');
+            document.getElementById('settlementDashboardTable').parentElement.insertAdjacentElement('afterend', panel);
+        }
+        const { year, month, category } = detailSelection;
+        const data = buildDetails(roadmapData.years?.[year], year, month, category);
+        const top = data.rows.find(row => row.total > 0);
+        const records = data.rows.map((row, index) => {
+            const items = row.items.map(item => `<tr><td>${escapeHTML(item.date)}</td><td>${escapeHTML(item.name)}</td><td>${money(item.amount)}원</td></tr>`).join('');
+            return `<details class="settlement-merchant" open><summary><span class="settlement-merchant-name">${index + 1}. ${escapeHTML(row.name)}</span><span class="settlement-merchant-count">사용 ${row.usageCount}회 · 내역 ${row.count}건${row.refundCount ? ` · 환불 ${row.refundCount}건` : ''}</span><strong>${money(row.total)}원</strong></summary><div class="settlement-record-scroll"><table><caption class="settlement-visually-hidden">${escapeHTML(row.name)} 개별 내역 · 금액 내림차순</caption><thead><tr><th scope="col">날짜</th><th scope="col">내용</th><th scope="col">금액</th></tr></thead><tbody>${items}</tbody><tfoot><tr><th colspan="2" scope="row">합계 · ${row.count}건</th><td>${money(row.total)}원</td></tr></tfoot></table></div></details>`;
+        }).join('');
+        panel.innerHTML = `<div class="settlement-drilldown-heading"><div><h4 id="settlementDashboardDetailTitle">${year}년 ${month + 1}월 · ${escapeHTML(category)} 상세내역</h4><p>같은 사용처·내용별 합계와 개별 내역을 금액 내림차순으로 표시합니다.</p></div><button type="button" id="settlementDashboardDetailsClose">상세 닫기</button></div><div class="settlement-drilldown-stats"><p>합계<strong>${money(data.total)}원</strong></p><p>사용 횟수<strong>${data.usageCount}회 <small>· 내역 ${data.count}건</small></strong></p><p>가장 많이 쓴 곳<strong>${top ? escapeHTML(top.name) : '없음'}</strong>${top ? `<small>${money(top.total)}원 · ${top.usageCount}회</small>` : ''}</p></div><p class="settlement-dashboard-note">사용 횟수는 양수 지출 기준입니다. 환불은 합계에서 차감하고 내역에는 포함합니다. 각 묶음을 눌러 접거나 펼칠 수 있습니다.</p><div class="settlement-merchant-list">${records || '<p class="settlement-dashboard-empty">이 월·카테고리에는 등록된 지출 내역이 없습니다.</p>'}</div>`;
+        panel.hidden = false;
+        document.getElementById('settlementDashboardDetailsClose').onclick = () => {
+            detailSelection = null;
+            renderSettlementDashboard();
+            document.getElementById('settlementDashboardTable').parentElement.focus();
+        };
     }
 
     function renderChart(model) {
@@ -87,6 +143,7 @@
         if (!panel || typeof roadmapData === 'undefined') return;
         const year = currentYear;
         const model = buildDashboard(roadmapData.years?.[year], roadmapData.categories?.settlement, year, document.getElementById('settlementDashboardFixed').checked);
+        if (detailSelection && (detailSelection.year !== year || !model.rows.some(row => row.name === detailSelection.category))) detailSelection = null;
         if (lastYear !== year || visibleCategories === null) visibleCategories = new Set(model.rows.map(row => row.name));
         else model.rows.forEach(row => { if (!knownCategories.has(row.name)) visibleCategories.add(row.name); });
         knownCategories = new Set(model.rows.map(row => row.name));
@@ -95,8 +152,24 @@
         document.getElementById('settlementDashboardSummary').textContent = `연간 합계 ${money(model.total)}원 · ${money(model.count)}건`;
         const head = '<tr><th scope="col">카테고리</th>' + Array.from({ length: 12 }, (_, month) => `<th scope="col">${month + 1}월</th>`).join('') + '<th scope="col">연간 합계</th></tr>';
         const cells = values => values.map(value => `<td>${money(value)}</td>`).join('');
-        const body = model.rows.map((row, index) => `<tr><th scope="row"><span class="trend-swatch" style="background:${COLORS[index % COLORS.length]}"></span>${escapeHTML(row.name)}</th>${cells(row.months)}<td class="trend-total">${money(row.total)}</td></tr>`).join('');
-        document.getElementById('settlementDashboardTable').innerHTML = `<caption>${year}년 카테고리별 월별 지출 · 단위: 원</caption><thead>${head}</thead><tbody>${body || '<tr><td colspan="14">등록된 지출 내역이 없습니다.</td></tr>'}</tbody><tfoot><tr><th scope="row">합계</th>${cells(model.monthlyTotals)}<td>${money(model.total)}</td></tr></tfoot>`;
+        const body = model.rows.map((row, index) => {
+            const monthCells = row.months.map((value, month) => `<td><button type="button" class="settlement-month-amount" data-dashboard-month="${month}" data-dashboard-category="${index}" aria-label="${escapeHTML(`${year}년 ${month + 1}월 ${row.name} ${money(value)}원 상세내역`)}" aria-pressed="${Boolean(detailSelection && detailSelection.month === month && detailSelection.category === row.name)}" aria-controls="settlementDashboardDetails">${money(value)}</button></td>`).join('');
+            return `<tr><th scope="row"><span class="trend-swatch" style="background:${COLORS[index % COLORS.length]}"></span>${escapeHTML(row.name)}</th>${monthCells}<td class="trend-total">${money(row.total)}</td></tr>`;
+        }).join('');
+        const table = document.getElementById('settlementDashboardTable');
+        table.innerHTML = `<caption>${year}년 카테고리별 월별 지출 · 단위: 원 · 월별 금액을 누르면 상세내역이 열립니다.</caption><thead>${head}</thead><tbody>${body || '<tr><td colspan="14">등록된 지출 내역이 없습니다.</td></tr>'}</tbody><tfoot><tr><th scope="row">합계</th>${cells(model.monthlyTotals)}<td>${money(model.total)}</td></tr></tfoot>`;
+        table.onclick = event => {
+            const button = event.target.closest('button[data-dashboard-month]');
+            if (!button || !table.contains(button)) return;
+            const month = Number(button.dataset.dashboardMonth), index = Number(button.dataset.dashboardCategory);
+            if (!Number.isInteger(month) || month < 0 || month > 11 || !model.rows[index]) return;
+            detailSelection = { year, month, category: model.rows[index].name };
+            renderSettlementDashboard();
+            const details = document.getElementById('settlementDashboardDetails');
+            details.focus({ preventScroll: true });
+            details.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+        };
+        renderDetails();
         document.getElementById('settlementDashboardEmpty').hidden = model.count > 0;
         const legend = document.getElementById('settlementTrendLegend');
         legend.replaceChildren();
@@ -120,5 +193,5 @@
     }
 
     root.renderSettlementDashboard = renderSettlementDashboard;
-    if (typeof module !== 'undefined' && module.exports) module.exports = { buildDashboard, monthOf };
+    if (typeof module !== 'undefined' && module.exports) module.exports = { buildDashboard, buildDetails, monthOf };
 })(typeof window !== 'undefined' ? window : globalThis);
