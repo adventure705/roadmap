@@ -279,28 +279,28 @@ main table :is(.table-input, .row-header-input, .header-input)::placeholder {
   opacity: 1;
 }
 
-/* Settlement doughnut labels sit on saturated chart segments, not the page surface. */
-#settlementPieChart > div[style*="position: absolute"] {
-  background: #25291f;
-  color: #fffdf5 !important;
-  border-radius: 6px;
-  padding: 3px 6px;
-  text-shadow: none !important;
-  box-shadow: 0 1px 4px #00000030;
+/* Outside doughnut labels: transparent background, dark text, colored leader lines. */
+#settlementPieChart {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 760px;
+  margin: 0 auto;
+  display: block;
+  overflow-x: auto;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
 }
-#settlementPieChart > div[style*="position: absolute"] > div {
-  color: #fffdf5 !important;
-  -webkit-text-fill-color: #fffdf5 !important;
-  filter: none;
+#settlementPieChart svg { display: block; width: 100%; min-width: 560px; height: auto; }
+#settlementPieChart .settlement-pie-callout {
+  fill: var(--ink, #302f25);
+  font: 14px 'Pretendard', 'Malgun Gothic', sans-serif;
+  font-weight: 600;
 }
-#settlementPieChart > .rounded-full {
-  background: var(--surface) !important;
-  color: var(--ink) !important;
-  backdrop-filter: none;
-}
-#settlementPieChart > .rounded-full > span:last-child {
-  color: var(--ink) !important;
-}
+#settlementPieChart .settlement-pie-share { font-weight: 700; }
+#settlementPieChart .settlement-pie-center-title { fill: var(--muted, #746f62); font: 13px 'Malgun Gothic', sans-serif; }
+#settlementPieChart .settlement-pie-center-total { fill: var(--ink, #302f25); font: 600 18px 'Malgun Gothic', sans-serif; }
+#settlementPieChart:has(svg) + #settlementChartLegend { display: none; }
 #settlementChartLegend span[style*="color:"] {
   color: var(--ink) !important;
 }

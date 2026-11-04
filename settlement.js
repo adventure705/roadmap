@@ -109,6 +109,46 @@ function sortTransactions(key) {
     updateSettlementUI(); // Re-render
 }
 
+// SVG presentation only: keep the existing amounts, shares, and category colors.
+function buildSettlementPieSVG(segments, total) {
+    const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    const labels = segments.map(segment => {
+        const angle = (segment.startAngle + segment.endAngle) / 2 * Math.PI / 180;
+        const chars = Array.from(String(segment.name));
+        const lines = [];
+        for (let i = 0; i < chars.length; i += 10) lines.push(chars.slice(i, i + 10).join(''));
+        return { ...segment, angle, side: Math.sin(angle) >= 0 ? 1 : -1, lines: lines.length ? lines : [''] };
+    });
+    const left = labels.filter(label => label.side < 0), right = labels.filter(label => label.side > 0);
+    const spacing = Math.max(44, ...labels.map(label => label.lines.length * 18 + 22));
+    const width = 640, height = Math.max(360, Math.max(left.length, right.length) * spacing + 72);
+    const cx = width / 2, cy = height / 2, radius = 94, circumference = 2 * Math.PI * radius;
+    [left, right].forEach(side => {
+        side.sort((a, b) => -Math.cos(a.angle) + Math.cos(b.angle));
+        side.forEach((label, index) => {
+            label.y = Math.max(spacing / 2 + 14, cy - 130 * Math.cos(label.angle), index ? side[index - 1].y + spacing : spacing / 2 + 14);
+        });
+        const overflow = side.length ? Math.max(0, side[side.length - 1].y - (height - spacing / 2 - 14)) : 0;
+        side.forEach(label => { label.y -= overflow; });
+    });
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="settlementPieTitle settlementPieDesc"><title id="settlementPieTitle">카테고리별 지출 비율</title><desc id="settlementPieDesc">총 실지출 ${escape(formatMoneyFull(total))}원. 각 조각에서 바깥의 카테고리명과 비율로 연결선이 이어집니다.</desc><circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="#ded9cc" stroke-width="40"/>`;
+    segments.forEach(segment => {
+        const length = (segment.endAngle - segment.startAngle) / 360 * circumference;
+        svg += `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${escape(segment.color)}" stroke-width="40" stroke-dasharray="${length} ${circumference}" stroke-dashoffset="${-segment.startAngle / 360 * circumference}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    });
+    labels.forEach(label => {
+        const x1 = cx + 116 * Math.sin(label.angle), y1 = cy - 116 * Math.cos(label.angle);
+        const x2 = cx + 134 * Math.sin(label.angle), y2 = cy - 134 * Math.cos(label.angle);
+        const textX = label.side > 0 ? 490 : 150, endX = textX - label.side * 8;
+        const anchor = label.side > 0 ? 'start' : 'end';
+        svg += `<polyline points="${x1},${y1} ${x2},${y2} ${endX},${label.y}" fill="none" stroke="${escape(label.color)}" stroke-width="1.5"/><text x="${textX}" y="${label.y - (label.lines.length - 1) * 9}" text-anchor="${anchor}" class="settlement-pie-callout">`;
+        label.lines.forEach((line, index) => { svg += `<tspan x="${textX}" dy="${index ? 18 : 0}">${escape(line)}</tspan>`; });
+        svg += `<tspan x="${textX}" dy="20" class="settlement-pie-share">${escape(label.share)}%</tspan></text>`;
+    });
+    svg += `<text x="${cx}" y="${cy - 10}" text-anchor="middle" class="settlement-pie-center-title">총 실지출</text><text x="${cx}" y="${cy + 18}" text-anchor="middle" class="settlement-pie-center-total">${escape(formatMoneyFull(total))}원</text></svg>`;
+    return svg;
+}
+
 // --- 1. Monthly View ---
 function renderSettlementMonthly() {
     const tbody = document.getElementById('monthlyTableBody');
@@ -145,13 +185,12 @@ function renderSettlementMonthly() {
 
     // --- Chart Logic (Use Total Actual vs Budget Share etc) ---
     // Only visualization of Current Month Share
-    let gradientSegments = [];
+    const pieSegments = [];
     let currentAngle = 0;
     const chartEl = document.getElementById('settlementPieChart');
 
     let html = '';
     let legendHTML = '';
-    let overlayHTML = '';
 
     // Render Rows & Chart
     cats.forEach((cat, index) => {
@@ -176,7 +215,7 @@ function renderSettlementMonthly() {
         // Chart Segment
         if (share > 0) {
             const endAngle = currentAngle + (share * 3.6);
-            gradientSegments.push(`${color} ${currentAngle}deg ${endAngle}deg`);
+
 
             legendHTML += `
                 <div class="flex items-center gap-3">
@@ -188,17 +227,7 @@ function renderSettlementMonthly() {
                 </div>
             `;
 
-            if (share > 6) {
-                const midAngle = currentAngle + (share * 3.6) / 2;
-                const rad = (midAngle * Math.PI) / 180;
-                const r = 105;
-                const x = Math.round(r * Math.sin(rad));
-                const y = Math.round(-r * Math.cos(rad));
-                overlayHTML += `<div style="position: absolute; left: 50%; top: 50%; transform: translate(calc(-50% + ${x}px), calc(-50% + ${y}px)); text-align: center; pointer-events: none; z-index: 20; text-shadow: 0 2px 4px rgba(0,0,0,0.9);">
-                    <div class="text-[14px] font-bold text-white leading-tight drop-shadow-md mb-0.5">${cat}</div>
-                    <div class="text-[14px] font-extrabold text-white">${shareRounded}%</div>
-                </div>`;
-            }
+            pieSegments.push({ name: cat, share: shareRounded, color, startAngle: currentAngle, endAngle });
             currentAngle = endAngle;
         }
 
@@ -226,14 +255,8 @@ function renderSettlementMonthly() {
     if (legendEl) legendEl.innerHTML = legendHTML;
 
     if (chartEl) {
-        if (totalActual === 0) {
-            chartEl.style.background = '#374151';
-            chartEl.innerHTML = `<div class="w-40 h-40 bg-gray-900/90 rounded-full z-10 flex items-center justify-center flex-col shadow-inner backdrop-blur-sm"><span class="text-xs text-gray-400 mb-1">총 실지출</span><span class="text-lg font-bold text-white tracking-tight">0원</span></div>`;
-        } else {
-            if (currentAngle < 360) gradientSegments.push(`#374151 ${currentAngle}deg 360deg`);
-            chartEl.style.background = `conic-gradient(${gradientSegments.join(', ')})`;
-            chartEl.innerHTML = `<div class="w-40 h-40 bg-gray-900/90 rounded-full z-10 flex items-center justify-center flex-col shadow-inner backdrop-blur-sm"><span class="text-xs text-gray-400 mb-1">총 실지출</span><span class="text-lg font-bold text-white tracking-tight">${formatMoneyFull(totalActual)}원</span></div>${overlayHTML}`;
-        }
+        chartEl.style.background = 'transparent';
+        chartEl.innerHTML = buildSettlementPieSVG(pieSegments, totalActual);
     }
 
     // Update Summaries
