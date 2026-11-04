@@ -220,3 +220,61 @@ body > .lg\:hidden.fixed.top-0 { background: var(--paper) !important; border-col
 :is(button, a, [role="button"]).hover\:bg-red-400:hover :is(span, strong, small, b, em, i) { color: inherit !important; }
 :is(button, a, [role="button"]).hover\:bg-red-500:hover { background-color: #893a32 !important; color: #fffdf5 !important; }
 :is(button, a, [role="button"]).hover\:bg-red-500:hover :is(span, strong, small, b, em, i) { color: inherit !important; }
+
+
+/* Inner lists, memo editors, and table fields also use the light palette. */
+.bg-gray-500, .bg-gray-600, .bg-gray-700,
+.bg-gray-700\/50, .bg-gray-700\/60 {
+  background-color: #eae6da !important;
+}
+.hover\:bg-gray-600:hover, .hover\:bg-gray-700:hover,
+.hover\:bg-gray-700\/50:hover, .hover\:bg-gray-700\/60:hover {
+  background-color: #e0dacb !important;
+}
+.bg-\[\#0f172a\]\/50 {
+  background-color: var(--paper) !important;
+  color: var(--ink) !important;
+}
+.bg-blue-900\/20, .bg-blue-900\/40, .bg-blue-900\/60,
+.bg-indigo-900\/40 {
+  background-color: #e3e6d7 !important;
+}
+.bg-purple-900\/40, .bg-purple-900\/60 {
+  background-color: #eee5ed !important;
+}
+:is(#sidebarManagerList, #rowManagerList, #colManagerList, #assetCategoryList) input:not([type=color]),
+:is(#commonMemoList, #yearlyMemoList) :is(input, textarea) {
+  color: var(--ink) !important;
+  -webkit-text-fill-color: var(--ink) !important;
+}
+:is(#commonMemoList, #yearlyMemoList) textarea {
+  background-color: var(--paper) !important;
+}
+:is(#commonMemoList, #yearlyMemoList) textarea::placeholder,
+:is(#sidebarManagerList, #rowManagerList, #colManagerList) input::placeholder {
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+}
+main table :is(.table-input, .row-header-input, .header-input) {
+  color: var(--ink);
+}
+/* An opaque editor surface keeps custom income row colors readable without changing saved colors. */
+#sheetBody :is(input:not([type=color]):not([type=checkbox]):not([type=radio]), select) {
+  background-color: var(--surface) !important;
+  color: var(--ink) !important;
+  -webkit-text-fill-color: var(--ink) !important;
+}
+/* Secret Board supplies inline white !important. Paint the glyphs with the theme ink;
+   leave its data/rendering code untouched and retain semantic red/blue differences. */
+main table .table-input.text-white {
+  -webkit-text-fill-color: var(--ink) !important;
+  caret-color: var(--ink);
+}
+main table .table-input:is(.text-red-400, .text-blue-400) {
+  -webkit-text-fill-color: currentColor !important;
+}
+main table :is(.table-input, .row-header-input, .header-input)::placeholder {
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+  opacity: 1;
+}
