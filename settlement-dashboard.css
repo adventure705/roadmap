@@ -45,18 +45,21 @@ body:has(> #settlementDashboardDetails[open]) { overflow:hidden !important; }
 .settlement-drilldown-stats small { font-size:12px; font-weight:400; }
 .settlement-merchant-list { padding-right:5px; }
 .settlement-merchant { border:1px solid #ded9cc; border-radius:7px; margin:12px 0; overflow:hidden; }
-.settlement-merchant summary { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; padding:14px; background:#f3f0e8; color:#302f25; cursor:pointer; }
+.settlement-merchant summary { display:grid; grid-template-columns:16px minmax(0,1fr) 170px 150px; align-items:center; gap:8px 12px; padding:14px; background:#f3f0e8; color:#302f25; cursor:pointer; }
 .settlement-merchant summary::before { content:'▸'; color:#66694b; }
 .settlement-merchant[open] summary::before { content:'▾'; }
-.settlement-merchant-name { flex:1; min-width:130px; font-weight:600; overflow-wrap:anywhere; }
+.settlement-merchant-name { min-width:0; font-weight:600; overflow-wrap:anywhere; }
 .settlement-merchant-count { font-size:12px; color:#676354; }
-.settlement-merchant summary strong { font-size:14px; font-variant-numeric:tabular-nums; }
+.settlement-merchant summary strong { font-size:14px; font-variant-numeric:tabular-nums; text-align:right; }
 .settlement-record-scroll { overflow-x:auto; }
-.settlement-merchant table { width:100%; min-width:450px; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+.settlement-merchant table { width:100%; min-width:600px; table-layout:fixed; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+.settlement-merchant thead th:first-child { width:140px; }
+.settlement-merchant thead th:last-child { width:160px; }
 .settlement-merchant :is(th,td) { padding:11px 14px; text-align:left; border-bottom:1px solid #e7e2d6; color:#302f25; }
 .settlement-merchant :is(th,td):last-child { text-align:right; white-space:nowrap; }
 .settlement-merchant td:first-child { white-space:nowrap; }
-.settlement-merchant td:nth-child(2) { overflow-wrap:anywhere; }
+.settlement-merchant :is(thead,tbody) :is(th,td):nth-child(2) { text-align:left; }
+.settlement-merchant td:nth-child(2) { overflow-wrap:anywhere; white-space:normal; }
 .settlement-merchant tfoot { background:#f3f0e8; font-weight:600; }
 .settlement-visually-hidden { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
-@media(max-width:640px) { .settlement-drilldown { padding:14px; width:calc(100% - 20px); max-height:94dvh; } .settlement-drilldown-heading { top:-14px; margin:-14px -14px 0; padding:14px; } .settlement-drilldown-stats { grid-template-columns:1fr; } }
+@media(max-width:640px) { .settlement-drilldown { padding:14px; width:calc(100% - 20px); max-height:94dvh; } .settlement-drilldown-heading { top:-14px; margin:-14px -14px 0; padding:14px; } .settlement-drilldown-stats { grid-template-columns:1fr; } .settlement-merchant summary { grid-template-columns:16px minmax(0,1fr) 120px; } .settlement-merchant-count { grid-column:2; grid-row:2; } .settlement-merchant summary strong { grid-column:3; grid-row:1 / span 2; } }
