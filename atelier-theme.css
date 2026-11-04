@@ -301,7 +301,17 @@ main table :is(.table-input, .row-header-input, .header-input)::placeholder {
 #settlementPieChart .settlement-pie-share { font-weight: 700; }
 #settlementPieChart .settlement-pie-center-title { fill: var(--muted, #746f62); font-family: inherit; font-size: 13px; }
 #settlementPieChart .settlement-pie-center-total { fill: var(--ink, #302f25); font-family: inherit; font-size: 18px; font-weight: 600; }
-#settlementPieChart:has(svg) + #settlementChartLegend { display: none; }
+/* Category percentage ranking beside the chart. */
+.settlement-chart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 220px; align-items: center; gap: 24px; max-width: 1120px !important; }
+#settlementChartLegend { display: block; min-width: 0; color: var(--ink); }
+#settlementChartLegend h4 { font-size: 15px; font-weight: 600; margin: 0 0 14px; }
+.settlement-share-list { list-style: none; margin: 0; padding: 0; }
+.settlement-share-list li { display: grid; grid-template-columns: 20px 9px minmax(0, 1fr) 44px; gap: 8px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.settlement-share-rank { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.settlement-share-dot { width: 9px; height: 9px; border-radius: 50%; }
+.settlement-share-name { overflow-wrap: anywhere; }
+.settlement-share-list strong { color: var(--ink); text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) { .settlement-chart-layout { grid-template-columns: minmax(0, 1fr); } #settlementChartLegend { width: 100%; max-width: 460px; margin: 0 auto; } }
 #settlementChartLegend span[style*="color:"] {
   color: var(--ink) !important;
 }

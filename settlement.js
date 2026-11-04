@@ -149,6 +149,15 @@ function buildSettlementPieSVG(segments, total) {
     return svg;
 }
 
+// Legend ordering changes presentation only; category and transaction order stay intact.
+function buildSettlementShareLegend(items) {
+    const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    const rows = items.slice().sort((a, b) => b.share - a.share || a.index - b.index);
+    return '<h4>카테고리별 비율</h4><ol class="settlement-share-list">' + rows.map((row, rank) =>
+        `<li><span class="settlement-share-rank">${rank + 1}</span><span class="settlement-share-dot" style="background-color:${escape(row.color)}"></span><span class="settlement-share-name">${escape(row.name)}</span><strong>${row.shareRounded}%</strong></li>`
+    ).join('') + '</ol>';
+}
+
 // --- 1. Monthly View ---
 function renderSettlementMonthly() {
     const tbody = document.getElementById('monthlyTableBody');
@@ -190,7 +199,7 @@ function renderSettlementMonthly() {
     const chartEl = document.getElementById('settlementPieChart');
 
     let html = '';
-    let legendHTML = '';
+    const legendItems = [];
 
     // Render Rows & Chart
     cats.forEach((cat, index) => {
@@ -211,21 +220,12 @@ function renderSettlementMonthly() {
         const share = totalActual > 0 ? (actual / totalActual) * 100 : 0;
         const shareRounded = Math.round(share);
         const color = CHART_COLORS[index % CHART_COLORS.length];
+        legendItems.push({ name: cat, share, shareRounded, color, index });
 
         // Chart Segment
         if (share > 0) {
             const endAngle = currentAngle + (share * 3.6);
 
-
-            legendHTML += `
-                <div class="flex items-center gap-3">
-                    <div class="w-4 h-4 rounded-full flex-shrink-0 shadow-sm" style="background-color: ${color}"></div>
-                    <div class="flex flex-col">
-                        <span class="text-sm text-gray-200 font-bold">${cat}</span>
-                        <span class="text-sm font-bold" style="color:${color}">${shareRounded}%</span>
-                    </div>
-                </div>
-            `;
 
             pieSegments.push({ name: cat, share: shareRounded, color, startAngle: currentAngle, endAngle });
             currentAngle = endAngle;
@@ -252,7 +252,7 @@ function renderSettlementMonthly() {
     tbody.innerHTML = html;
 
     const legendEl = document.getElementById('settlementChartLegend');
-    if (legendEl) legendEl.innerHTML = legendHTML;
+    if (legendEl) legendEl.innerHTML = buildSettlementShareLegend(legendItems);
 
     if (chartEl) {
         chartEl.style.background = 'transparent';
