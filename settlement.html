@@ -7,7 +7,6 @@
     <title>슈퍼문 로드맵 - 지출 예정산</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700;800&display=swap"
         rel="stylesheet">
     <style>
@@ -159,6 +158,7 @@
                             <input type="file" id="xlsInput" accept=".xlsx, .xls" class="hidden"
                                 onchange="handleExcelUpload(this)">
                         </label>
+                        <span id="settlementExcelStatus" role="status" aria-live="polite" class="self-center text-sm text-gray-400"></span>
                         <button onclick="openBudgetModal()"
                             class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition">💵
                             예산 설정</button>

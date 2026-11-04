@@ -1,5 +1,8 @@
 // Settlement Page Logic
 
+let settlementRenderPending = false;
+let settlementTransactionManagerOpen = false;
+let settlementExcelLibraryPromise = null;
 let settleViewMode = 'monthly'; // 'monthly' or 'weekly'
 let pendingClassifications = []; // Queue for items needing classification
 
@@ -8,11 +11,20 @@ const CHART_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#e
 function initSettlementPage() {
     window.currentPageType = 'settlement';
     window.updateUI = updateSettlementUI; // Alias for data.js
-    renderMemos();
     updateSettlementUI();
 }
 
+// Coalesce shared updateUI/updateSettlementUI notifications into one frame.
 function updateSettlementUI() {
+    if (settlementRenderPending) return;
+    settlementRenderPending = true;
+    requestAnimationFrame(() => {
+        settlementRenderPending = false;
+        renderSettlementUI();
+    });
+}
+
+function renderSettlementUI() {
     // Year/Month Display
     const yearDisplay = document.getElementById('sheetYearDisplay');
     if (yearDisplay) yearDisplay.innerText = currentYear;
@@ -26,6 +38,7 @@ function updateSettlementUI() {
     } else {
         renderSettlementWeekly();
     }
+    if (settlementTransactionManagerOpen) renderTransactionList(getMonthlyTransactions());
     renderMemos();
 }
 
@@ -237,14 +250,12 @@ function renderSettlementMonthly() {
     const summaryExcludedEl = document.getElementById('summaryExcluded');
     if (summaryExcludedEl) summaryExcludedEl.innerText = formatMoneyFull(excludedTotal) + '원';
 
-    if (typeof renderTransactionList === 'function') {
-        renderTransactionList(allTransactions);
-    }
 }
 
 // --- Detailed Transaction List Logic ---
 // --- Transaction Manager Modal Controls ---
 function openTransactionManager() {
+    settlementTransactionManagerOpen = true;
     const modal = document.getElementById('transactionManagerModal');
     modal.style.display = 'flex';
     setTimeout(() => {
@@ -258,6 +269,7 @@ function openTransactionManager() {
 }
 
 function closeTransactionManager() {
+    settlementTransactionManagerOpen = false;
     const modal = document.getElementById('transactionManagerModal');
     modal.classList.add('opacity-0');
     modal.querySelector('div').classList.add('scale-95');
@@ -361,7 +373,7 @@ function renderTransactionList(transactions) {
 }
 
 function filterDetailList() {
-    updateSettlementUI(); // Re-render to apply filter
+    if (settlementTransactionManagerOpen) renderTransactionList(getMonthlyTransactions());
 }
 
 function toggleAllDetailChecks(source) {
@@ -707,12 +719,42 @@ function saveBudgets() {
 
 // --- 4. XLS Parsing & Import ---
 
-function handleExcelUpload(input) {
+// Download the existing Excel library only when a file is selected.
+function loadSettlementExcelLibrary() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (settlementExcelLibraryPromise) return settlementExcelLibraryPromise;
+    settlementExcelLibraryPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
+        script.async = true;
+        const fail = () => {
+            script.remove();
+            settlementExcelLibraryPromise = null;
+            reject(new Error('엑셀 처리 도구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'));
+        };
+        script.onload = () => window.XLSX ? resolve(window.XLSX) : fail();
+        script.onerror = fail;
+        document.head.appendChild(script);
+    });
+    return settlementExcelLibraryPromise;
+}
+
+async function handleExcelUpload(input) {
     const file = input.files[0];
     if (!file) return;
 
-    // Try-Catch wrapper
+    const status = document.getElementById('settlementExcelStatus');
+    const finish = () => {
+        input.disabled = false;
+        input.value = '';
+        if (status) status.textContent = '';
+    };
+    if (input.disabled) return;
+    input.disabled = true;
+    if (status) status.textContent = '엑셀 파일을 읽는 중…';
+    // Parsing and import behavior stay unchanged after the library is ready.
     try {
+        await loadSettlementExcelLibrary();
         const reader = new FileReader();
         reader.onload = function (e) {
             try {
@@ -726,11 +768,16 @@ function handleExcelUpload(input) {
                 console.error(err);
                 alert('엑셀 파일 읽기 오류: ' + err.message);
             }
-            input.value = ''; // Reset
+            finish();
+        };
+        reader.onerror = () => {
+            finish();
+            alert('엑셀 파일을 읽지 못했습니다. 다시 시도해 주세요.');
         };
         reader.readAsArrayBuffer(file);
     } catch (e) {
-        alert('파일 업로드 시작 실패');
+        finish();
+        alert('파일 업로드 시작 실패: ' + e.message);
     }
 }
 
