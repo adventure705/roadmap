@@ -158,15 +158,15 @@
         if (lastYear !== year || visibleCategories === null) visibleCategories = new Set();
         lastYear = year;
         document.getElementById('settlementDashboardYear').textContent = `${year}년`;
-        document.getElementById('settlementDashboardSummary').textContent = `연간 합계 ${money(model.total)}원 · ${money(model.count)}건`;
-        const head = '<tr><th scope="col">카테고리</th>' + Array.from({ length: 12 }, (_, month) => `<th scope="col">${month + 1}월</th>`).join('') + '<th scope="col">연간 합계</th></tr>';
+        document.getElementById('settlementDashboardSummary').textContent = `월평균(12개월) ${money(Math.round(model.total / 12))}원 · 연간 합계 ${money(model.total)}원 · ${money(model.count)}건`;
+        const head = '<tr><th scope="col">카테고리</th>' + Array.from({ length: 12 }, (_, month) => `<th scope="col">${month + 1}월</th>`).join('') + '<th scope="col">월평균</th><th scope="col">연간 합계</th></tr>';
         const cells = values => values.map(value => `<td>${money(value)}</td>`).join('');
         const body = model.rows.map((row, index) => {
             const monthCells = row.months.map((value, month) => `<td><button type="button" class="settlement-month-amount" data-dashboard-month="${month}" data-dashboard-category="${index}" aria-label="${escapeHTML(`${year}년 ${month + 1}월 ${row.name} ${money(value)}원 상세내역`)}" aria-pressed="${Boolean(detailSelection && detailSelection.month === month && detailSelection.category === row.name)}" aria-controls="settlementDashboardDetails">${money(value)}</button></td>`).join('');
-            return `<tr><th scope="row"><span class="trend-swatch" style="background:${COLORS[index % COLORS.length]}"></span>${escapeHTML(row.name)}</th>${monthCells}<td class="trend-total">${money(row.total)}</td></tr>`;
+            return `<tr><th scope="row"><span class="trend-swatch" style="background:${COLORS[index % COLORS.length]}"></span>${escapeHTML(row.name)}</th>${monthCells}<td class="trend-total">${money(Math.round(row.total / 12))}</td><td class="trend-total">${money(row.total)}</td></tr>`;
         }).join('');
         const table = document.getElementById('settlementDashboardTable');
-        table.innerHTML = `<caption>${year}년 카테고리별 월별 지출 · 단위: 원 · 월별 금액을 누르면 상세내역이 열립니다.</caption><thead>${head}</thead><tbody>${body || '<tr><td colspan="14">등록된 지출 내역이 없습니다.</td></tr>'}</tbody><tfoot><tr><th scope="row">합계</th>${cells(model.monthlyTotals)}<td>${money(model.total)}</td></tr></tfoot>`;
+        table.innerHTML = `<caption>${year}년 카테고리별 월별 지출 · 단위: 원 · 월평균은 12개월 기준, 원 단위 반올림 · 월별 금액을 누르면 상세내역이 열립니다.</caption><thead>${head}</thead><tbody>${body || '<tr><td colspan="15">등록된 지출 내역이 없습니다.</td></tr>'}</tbody><tfoot><tr><th scope="row">합계</th>${cells(model.monthlyTotals)}<td>${money(Math.round(model.total / 12))}</td><td>${money(model.total)}</td></tr></tfoot>`;
         table.onclick = event => {
             const button = event.target.closest('button[data-dashboard-month]');
             if (!button || !table.contains(button)) return;

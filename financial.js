@@ -1297,13 +1297,14 @@ function renderYearlyTable() {
     // I will hide it if isBusiness, or global?
     // Let's hide it for Business as requested in that context.
     if (!isBusiness) {
-        bodyHTML += `<tr class="bg-gray-800/80 font-bold border-t-2 border-white/10">`;
+        let totalRowHTML = `<tr class="bg-gray-800/80 font-bold border-t-2 border-white/10">`;
         let labelColSpan = 1;
-        bodyHTML += `<td class="px-4 py-3 sticky left-0 bg-gray-800/90 z-10 text-blue-300" colspan="${labelColSpan}">총계</td>`;
-        finalTotalValues.forEach(val => { bodyHTML += `<td class="px-4 py-3 text-right text-blue-300">${formatMoneyFull(val)}</td>`; });
-        bodyHTML += `<td class="px-4 py-3 text-right text-yellow-400 bg-gray-900 border-l border-white/10 main-total">${formatMoneyFull(grandTotal)}</td>`;
-        bodyHTML += `<td class="bg-gray-900 border-l border-white/10"></td>`;
-        bodyHTML += `</tr>`;
+        totalRowHTML += `<td class="px-4 py-3 sticky left-0 bg-gray-800/90 z-10 text-blue-300" colspan="${labelColSpan}">총계</td>`;
+        finalTotalValues.forEach(val => { totalRowHTML += `<td class="px-4 py-3 text-right text-blue-300">${formatMoneyFull(val)}</td>`; });
+        totalRowHTML += `<td class="px-4 py-3 text-right text-yellow-400 bg-gray-900 border-l border-white/10 main-total">${formatMoneyFull(grandTotal)}</td>`;
+        totalRowHTML += `<td class="bg-gray-900 border-l border-white/10"></td>`;
+        totalRowHTML += `</tr>`;
+        bodyHTML = isInstallment ? totalRowHTML + bodyHTML : bodyHTML + totalRowHTML;
     }
 
     tbody.innerHTML = bodyHTML;

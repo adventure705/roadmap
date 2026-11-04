@@ -291,15 +291,16 @@ main table :is(.table-input, .row-header-input, .header-input)::placeholder {
   background: transparent !important;
   box-shadow: none !important;
 }
-#settlementPieChart svg { display: block; width: 100%; min-width: 560px; height: auto; }
+#settlementPieChart svg { display: block; width: 100%; min-width: 560px; height: auto; font-family: inherit; }
 #settlementPieChart .settlement-pie-callout {
   fill: var(--ink, #302f25);
-  font: 14px 'Pretendard', 'Malgun Gothic', sans-serif;
+  font-family: inherit;
+  font-size: 14px;
   font-weight: 600;
 }
 #settlementPieChart .settlement-pie-share { font-weight: 700; }
-#settlementPieChart .settlement-pie-center-title { fill: var(--muted, #746f62); font: 13px 'Malgun Gothic', sans-serif; }
-#settlementPieChart .settlement-pie-center-total { fill: var(--ink, #302f25); font: 600 18px 'Malgun Gothic', sans-serif; }
+#settlementPieChart .settlement-pie-center-title { fill: var(--muted, #746f62); font-family: inherit; font-size: 13px; }
+#settlementPieChart .settlement-pie-center-total { fill: var(--ink, #302f25); font-family: inherit; font-size: 18px; font-weight: 600; }
 #settlementPieChart:has(svg) + #settlementChartLegend { display: none; }
 #settlementChartLegend span[style*="color:"] {
   color: var(--ink) !important;
